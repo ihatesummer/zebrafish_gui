@@ -336,7 +336,7 @@ def main(IMG_PATH: str,
             print("ERROR: failed at removing false eye(s)."
                   "Try adjusting the Hu distance threshold")
             bDetected = False
-            break
+            return bDetected, 0, 0, 0
     '''
     When less than two eyes are found,
     it is likely that the brightness threshold
@@ -363,6 +363,7 @@ def main(IMG_PATH: str,
                                    len_bounds_eye)
     if not bDetected:
         print(f"ERROR: Failed at detecting 2 eyes for {img_input}")
+        return bDetected, 0, 0, 0
     else:
         if bDebug:
             print(f"2 eyes successfully detected for {img_input}")
@@ -421,6 +422,7 @@ def main(IMG_PATH: str,
         filtered_cnt_blad = filtered_cnt_blad[0]
     if not bDetected:
         print(f"ERROR: Failed at detecting a bladder for {img_input}")
+        return bDetected, 0, 0, 0
     else:
         if bDebug:
             print(f"Bladder successfully detected for {img_input}")
@@ -430,9 +432,6 @@ def main(IMG_PATH: str,
             imshow(f'Detected bladder for {img_input}', img_len_fil_con)
             waitKey(0)
             destroyAllWindows()
-    print(shape(filtered_cnt_blad))
-    print(len(filtered_cnt_blad))
-    print(filtered_cnt_blad)
 
     inscribed_img = img.copy()
     eye_centers = []
