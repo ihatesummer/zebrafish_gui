@@ -1,0 +1,51 @@
+#:kivy 2.0.0
+<Button>:
+    bold: True 
+    color: (1, 1, 1, 1)
+    background_color: (0.1, 0.1, 0.1, 1)
+    font_size: 15
+<TextInput>:
+    color: (1, 1, 1, 1)
+    font_size: 15
+
+<MainWindow>:
+    canvas.before:
+        Color:
+            rgba: 1, 1, 1, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+        Color:
+            rgba: 0, 0, 0, 1
+        Line:
+            width: 2
+            points: (0, 0, self.width, 0, self.width, self.height, 0, self.height, 0, 0)
+        Line:
+            width: 1
+            points: (1, self.height/2, self.width-1, self.height/2)
+        Line:
+            width: 1
+            points: (self.width/2, self.height-1, self.width/2, self.height/2+1)
+    BoxLayout:
+        orientation: 'vertical'
+        BoxLayout:
+            orientation: 'horizontal'
+            ImagesPreview:
+                
+            Label:
+                text: 'Data'
+                font_size: root.text_size_header
+                color: root.text_color
+        Label:
+            id: graph_label
+            text: 'Graph'
+            font_size: root.text_size_header
+            color: root.text_color
+
+<Data>:
+    Label:
+        text: 'Data'
+
+<Graph>:
+    Label:
+        text: 'Graph'

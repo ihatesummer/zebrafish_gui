@@ -1,0 +1,371 @@
+#:kivy 2.0.0
+<Label>:
+    background_color: (0.1, 0.1, 0.1, 1)
+    canvas.before:
+        Color:
+            rgba: self.background_color
+        Rectangle:
+            size: self.size
+            pos: self.pos
+
+<Processing>:
+    BoxLayout:
+        orientation: "vertical"
+        size: root.width, root.height
+        spacing: 10
+        padding: 5
+        Label:
+            text: "<Processing Window>"
+            bold: True
+            font_size: 20
+            size_hint: None, None
+            size: root.width, 30
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: 110
+            FileChooserListView:
+                id: filechooser
+                rootpath: "./videos"
+                padding: 20
+                on_selection: root.set_vid_name()
+            Button:
+                text: "Extract frames"
+                size_hint: None, 1
+                width: root.width/4
+                background_color: (1,1,1,1)
+                on_press: root.frame_extraction()
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: 30
+            background_color: (0, 0, 0, 1)
+            Label:
+                size_hint_x: None
+                width: self.parent.width*3/4
+                id: vid_selected
+                text: "Select a video from above..."
+            Label:
+                text: "FPS:"
+            TextInput:
+                id: fps
+                multiline: False
+                size_hint_x: None
+                on_text: root.set_properties("fps")
+        BoxLayout:
+            orientation: "horizontal"
+            spacing: 50
+        # Preview pane (left side)
+            BoxLayout:
+                orientation: "vertical"
+                spacing: 20
+                BoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y: None
+                    height: 20
+                    spacing: 10
+                    Label:
+                        text: "Original"
+                    Label:
+                        text: "Processed"
+                BoxLayout:
+                    orientation: "horizontal"
+                    spacing: 10
+                    Image:
+                        id: preview_orig
+                        source: root.frame
+                        allow_stretch: True
+                    Image:
+                        id: preview_proc
+                        source: root.frame_processed
+                        allow_stretch: True
+                BoxLayout:
+                    orientation: 'horizontal'
+                    size_hint: 0.7, None
+                    pos_hint: {'center_x': 0.5}
+                    height: 20
+                    Button:
+                        text: "<"
+                        size_hint_x: 0.1
+                        on_press: root.dec_frame()
+                    Slider:
+                        id: frame_slider
+                        min: 0
+                        max: 0
+                        step: 1
+                        orientation: "horizontal"
+                        on_value: root.slide(*args)
+                    Button:
+                        text: ">"
+                        size_hint_x: 0.1
+                        on_press: root.inc_frame()
+                BoxLayout:
+                    orientation: 'horizontal'
+                    size_hint: None, None
+                    pos_hint: {'center_x': 0.5}
+                    width: self.parent.width/9
+                    height: 30
+                    Label:
+                        text: "frame: "
+                        background_color: (0, 0, 0, 1)
+                        size_hint_x: 0.4
+                    TextInput:
+                        id: frame_no_input
+                        multiline: False
+                        text: str(root.frame_no)
+                        size_hint_x: 0.6
+                        on_text_validate: root.goto_frame()
+        # Thresholds pane (right side)
+            BoxLayout:
+                orientation: "vertical"
+                size_hint: None, None
+                size: root.width/4, root.height*0.6
+                spacing: 10
+                
+                GridLayout:
+                    cols: 1
+                    size_hint: None, None
+                    width: self.parent.width
+                    height: self.parent.height*10/16
+                    spacing: 1
+                    Label:
+                        text: "Detection Properties"
+                        size_hint_y: None
+                        height: 20
+                        background_color: (0.1, 0.5, 0.1, 1)
+                        bold: True
+                    BoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: 20
+                        spacing: 1
+                        Label:
+                            text: "Target"
+                            size_hint: 0.2, None
+                            height: 20
+                            background_color: (0.1, 0.5, 0.1, 1)
+                        Label:
+                            text: "Thresholds"
+                            size_hint: 0.8, None
+                            height: 20
+                            background_color: (0.1, 0.5, 0.1, 1)
+                    BoxLayout:
+                        orientation: "horizontal"
+                        spacing: 1
+                        BoxLayout:
+                            orientation: "vertical"
+                            size_hint_x: 0.2
+                            spacing: 1
+                            Label:
+                                text: "Eyes"
+                                size_hint_y: 0.4
+                            Label:
+                                text: "Baldder"
+                                size_hint_y: 0.4
+                            Label:
+                                text: "General"
+                                size_hint_y: 0.2
+                        GridLayout:
+                            cols: 2
+                            size_hint_x: 0.8
+                            Label:
+                                text: "Brightness_low: "
+                            TextInput:
+                                id: ble
+                                multiline: False
+                                size_hint_x: None
+                                size_x: 0.1
+                                on_text: root.set_properties("ble")
+                            Label:
+                                text: "Brightness_high: "
+                            TextInput:
+                                id: bhe
+                                multiline: False
+                                size_hint_x: None
+                                size_x: 0.1
+                                on_text: root.set_properties("bhe")
+                            Label:
+                                text: "ContourLength_low: "
+                            TextInput:
+                                id: cle
+                                multiline: False
+                                size_hint_x: None
+                                size_x: 0.1
+                                on_text: root.set_properties("cle")
+                            Label:
+                                text: "ContourLength_high: "
+                            TextInput:
+                                id: che
+                                multiline: False
+                                size_hint_x: None
+                                size_x: 0.1
+                                on_text: root.set_properties("che")
+                            Label:
+                                text: "Brightness_low: "
+                            TextInput:
+                                id: blb
+                                multiline: False
+                                size_hint_x: None
+                                size_x: 0.1
+                                on_text: root.set_properties("blb")
+                            Label:
+                                text: "Brightness_high: "
+                            TextInput:
+                                id: bhb
+                                multiline: False
+                                size_hint_x: None
+                                size_x: 0.1
+                                on_text: root.set_properties("bhb")
+                            Label:
+                                text: "ContourLength_low: "
+                            TextInput:
+                                id: clb
+                                multiline: False
+                                size_hint_x: None
+                                size_x: 0.1
+                                on_text: root.set_properties("clb")
+                            Label:
+                                text: "ContourLength_high: "
+                            TextInput:
+                                id: chb
+                                multiline: False
+                                size_hint_x: None
+                                size_x: 0.1
+                                on_text: root.set_properties("chb")
+                            Label:
+                                text: "Hu_distance: "
+                            TextInput:
+                                id: hd
+                                multiline: False
+                                size_hint_x: None
+                                size_x: 0.1
+                                on_text: root.set_properties("hd")
+                            Label:
+                                text: "TimeBar_pos_y: "
+                            TextInput:
+                                id: tpy
+                                multiline: False
+                                size_hint_x: None
+                                size_x: 0.1
+                                on_text: root.set_properties("tpy")
+                            
+                GridLayout:
+                    cols: 1
+                    size_hint: None, None
+                    width: self.parent.width
+                    height: self.parent.height*6/16
+                    spacing: 1
+                    Label:
+                        text: "Inscription Offsets"
+                        size_hint_y: None
+                        height: 20
+                        background_color: (0.1, 0.1, 0.5, 1)
+                        bold: True
+                    BoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: 20
+                        spacing: 1
+                        Label:
+                            text: "Target"
+                            size_hint: 0.2, None
+                            height: 20
+                            background_color: (0.1, 0.1, 0.5, 1)
+                        Label:
+                            text: "Offset"
+                            size_hint: 0.8, None
+                            height: 20
+                            background_color: (0.1, 0.1, 0.5, 1)
+                    BoxLayout:
+                        orientation: "horizontal"
+                        spacing: 1
+                        BoxLayout:
+                            orientation: "vertical"
+                            size_hint_x: 0.2
+                            spacing: 1
+                            Label:
+                                text: "Left eye"
+                            Label:
+                                text: "Right eye"
+                            Label:
+                                text: "Baldder"
+                        GridLayout:
+                            cols: 2
+                            size_hint_x: 0.8
+                            Label:
+                                text: "x offset: "
+                            TextInput:
+                                id: ins_off_x_eyeL
+                                multiline: False
+                                size_hint_x: None
+                                size_x: 0.1
+                                on_text: root.set_properties("ins_off_x_eyeL")
+                            Label:
+                                text: "y offset: "
+                            TextInput:
+                                id: ins_off_y_eyeL
+                                multiline: False
+                                size_hint_x: None
+                                size_x: 0.1
+                                on_text: root.set_properties("ins_off_y_eyeL")
+                            Label:
+                                text: "x offset: "
+                            TextInput:
+                                id: ins_off_x_eyeR
+                                multiline: False
+                                size_hint_x: None
+                                size_x: 0.1
+                                on_text: root.set_properties("ins_off_x_eyeR")
+                            Label:
+                                text: "y offset: "
+                            TextInput:
+                                id: ins_off_y_eyeR
+                                multiline: False
+                                size_hint_x: None
+                                size_x: 0.1
+                                on_text: root.set_properties("ins_off_y_eyeR")
+                            Label:
+                                text: "x offset: "
+                            TextInput:
+                                id: ins_off_x_blad
+                                multiline: False
+                                size_hint_x: None
+                                size_x: 0.1
+                                on_text: root.set_properties("ins_off_x_blad")
+                            Label:
+                                text: "y offset: "
+                            TextInput:
+                                id: ins_off_y_blad
+                                multiline: False
+                                size_hint_x: None
+                                size_x: 0.1
+                                on_text: root.set_properties("ins_off_y_blad")
+
+                BoxLayout:
+                    orientation: 'horizontal'
+                    size_hint: None, None
+                    height: 30
+                    width: self.parent.width
+                    spacing: 10
+                    Button:
+                        text: "Save settings"
+                        on_press: root.save_settings()
+                        background_color: (1, 1, 1, 1)
+                    Button:
+                        text: "Load settings"
+                        on_press: root.load_settings()
+                        background_color: (1, 1, 1, 1)
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint: None, None
+                    height: 70
+                    width: self.parent.width
+                    spacing: 10
+                    Button:
+                        text: "Process this frame (Test settings)"
+                        background_color: (1, 1, 1, 1)
+                        on_press: root.angle_detection(root.frame_no)
+                    Button:
+                        text: "Process whole video"
+                        background_color: (1, 1, 1, 1)
+                        on_press: root.angle_detection("all")
