@@ -194,7 +194,6 @@ def remove_false_bladder(bladders, eyes, TIMEBAR_YPOS_THRESH):
         dist = norm(
             array(bladder_center)-array(eyes_midpoint),
             ord=2)
-
         '''
         Excluding the timebar.
         Since the timebar is at the top-left corner,
@@ -203,14 +202,11 @@ def remove_false_bladder(bladders, eyes, TIMEBAR_YPOS_THRESH):
         '''
         if bladder_center[1] < TIMEBAR_YPOS_THRESH:
             dist = 0
-
         bladder_to_eye_distances.append(dist)
 
-    while len(bladders) > 1:
-        remove_idx = argmin(bladder_to_eye_distances)
-        bladders = delete(bladders, remove_idx, axis=0)
+    argmax_idx = argmax(bladder_to_eye_distances)
 
-    return bladders
+    return bladders[argmax_idx]
 
 
 def get_frame_no(filename: str) -> int:
@@ -399,7 +395,7 @@ def main(IMG_PATH: str,
 
         print("Filtering contours with length bounds of ",
               len_bounds_bladder, "...")
-        for contour in filtered_cnt_eyes:
+        for contour in filtered_cnt_blad:
             print("Length of filtered contours:",
                   len(contour))
         print(f"Total {len(filtered_cnt_blad)} contours found.")
@@ -411,16 +407,18 @@ def main(IMG_PATH: str,
 
     if len(filtered_cnt_blad) != 1:
         if len(filtered_cnt_blad) == 0:
-            if bDebug:
-                print(f"ERROR: No bladder detected for {img_input}.")
+            print(f"ERROR: No bladder detected for {img_input}.")
             bDetected = False
-        else:
-            if (len(filtered_cnt_blad) > 1):
-                if bDebug:
-                    print(f"{len(filtered_cnt_blad)} bladder candidates found.",
-                    "Removing false bladder(s)...")
-                filtered_cnt_blad = remove_false_bladder(
-                    filtered_cnt_blad, filtered_cnt_eyes, TIMEBAR_YPOS_THRESH)
+            return bDetected, 0, 0, 0
+
+        elif (len(filtered_cnt_blad) > 1):
+            if bDebug:
+                print(f"{len(filtered_cnt_blad)} bladder candidates found.",
+                "Removing false bladder(s)...")
+            filtered_cnt_blad = remove_false_bladder(
+                filtered_cnt_blad, filtered_cnt_eyes, TIMEBAR_YPOS_THRESH)
+    else:
+        filtered_cnt_blad = filtered_cnt_blad[0]
     if not bDetected:
         print(f"ERROR: Failed at detecting a bladder for {img_input}")
     else:
@@ -432,6 +430,9 @@ def main(IMG_PATH: str,
             imshow(f'Detected bladder for {img_input}', img_len_fil_con)
             waitKey(0)
             destroyAllWindows()
+    print(shape(filtered_cnt_blad))
+    print(len(filtered_cnt_blad))
+    print(filtered_cnt_blad)
 
     inscribed_img = img.copy()
     eye_centers = []
@@ -449,10 +450,9 @@ def main(IMG_PATH: str,
         inscribe_major_axis(inscribed_img, xc, yc,
                             d1, d2, angle, BLUE, 1)
     
-    for bladder in filtered_cnt_blad:
-        [xc, yc], [d1, d2], _ = fitEllipse(bladder)
-        bladder_center = (int(xc), int(yc))
-        circle(inscribed_img, bladder_center, 2, BLUE, 3)
+    [xc, yc], [d1, d2], _ = fitEllipse(filtered_cnt_blad)
+    bladder_center = (int(xc), int(yc))
+    circle(inscribed_img, bladder_center, 2, BLUE, 3)
 
     point_btwn_eyes = get_midpoint(eye_centers[0], eye_centers[1])
     circle(inscribed_img, point_btwn_eyes, 2, BLUE, 3)

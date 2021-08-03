@@ -73,9 +73,9 @@ def main_decord(vid: str, IMG_PATH: str, VID_PATH: str,
         if (not exists(file_name)) or overwrite:
             frame = vr[frame_counter]
             imwrite(file_name, cvtColor(frame.asnumpy(), COLOR_RGB2BGR))
-            print(f"frame {frame_counter} of {nFrames-1} saved")
+            print(f"Frame {frame_counter} of {nFrames-1} saved")
         else:
-            print(f"frame {frame_counter} of {nFrames-1} skipped")
+            print(f"Frame {frame_counter} of {nFrames-1} skipped")
 
 
 if __name__ == "__main__":

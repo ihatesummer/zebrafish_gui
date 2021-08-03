@@ -275,7 +275,12 @@ class Processing(Widget):
                     img_input,
                     img_output,
                     bDebug)
-                
+                if out_bDetected[i]:
+                    print(f"Frame #{int(out_frame_no[i])} of",
+                        f"{len(file_list)} succesfully processed.")
+                else:
+                    print(f"Frame #{int(out_frame_no[i])} of",
+                        f"{len(file_list)} failed.")
             self.save_result(
                 out_bDetected,
                 out_frame_no,

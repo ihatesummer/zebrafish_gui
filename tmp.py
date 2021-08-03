@@ -1,9 +1,11 @@
-from numpy import linspace
+from numpy import linspace, argmax, array, delete, shape, size
 
-a = linspace(1,5,5)
-b = a.copy()
-a[4] = 10
-b[0] = 0
-for i in range(1, len(a)):
-     b[i] = a[i] - a[i-1]
-print(b)
+a = [array([[[1, 1]],
+            [[2, 2]],
+            [[3, 3]],
+            [[4, 4]]], dtype=int)]
+b = array([[[1, 1]],
+           [[2, 2]]])
+print(a)
+print(shape(a))
+print(shape(b))
