@@ -1,13 +1,4 @@
 #:kivy 2.0.0
-<Label>:
-    background_color: (0.1, 0.1, 0.1, 1)
-    canvas.before:
-        Color:
-            rgba: self.background_color
-        Rectangle:
-            size: self.size
-            pos: self.pos
-
 <Processing>:
     BoxLayout:
         orientation: "vertical"
@@ -51,6 +42,7 @@
                 id: fps
                 multiline: False
                 size_hint_x: None
+                width: self.parent.width*0.7/4
                 on_text: root.set_properties("fps")
         BoxLayout:
             orientation: "horizontal"
