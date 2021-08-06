@@ -1,0 +1,394 @@
+#:kivy 2.0.0
+<Plotting>:
+    BoxLayout:
+        orientation: "vertical"
+        size: root.width, root.height
+        spacing: 10
+        padding: 15
+        Label:
+            text: "<Plotting Window>"
+            bold: True
+            font_size: 20
+            size_hint: None, None
+            size: root.width, 30
+        BoxLayout:
+            orientation: 'horizontal'
+            spacing: 10
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_x: None
+                width: root.width * 0.6
+                FileChooserListView:
+                    id: filechooser
+                    size_hint_y: None
+                    width: self.parent.width * 0.2
+                    rootpath: "./videos"
+                    padding: 20
+                    on_selection: root.select_vid()
+                Label:
+                    id: vid_selected
+                    text: "Select a video from above ..."
+                    size_hint_y: None
+                    height: 30
+                Image:
+                    id: preview_graph
+                    source: root.graph_file
+                    allow_stretch: True
+
+# Right Pane
+            GridLayout:
+                cols: 1
+                spacing: 30
+                padding: 10
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.parent.height * 0.3
+                    Label:
+                        text: "x-axis"
+                        background_color: (0.5, 0.1, 0.1, 1)
+                        bold: True
+                        size_hint_y: None
+                        height: 30
+                    GridLayout:
+                        cols:2
+                        Label:
+                            text: "Axis:"
+                            size_hint_x: None
+                            width: self.parent.width * 0.15
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            Label:
+                                text: "time"
+                                background_color: (0,0,0,1)
+                            CheckBox:
+                                id: x_ax_time
+                                group: "x-axis choice"
+                                active: True
+                                on_active: root.update_axes_selection(self, self.active, "x", "time")
+                            Label:
+                                text: "frame"
+                                background_color: (0,0,0,1)
+                            CheckBox:
+                                id: x_ax_frame
+                                group: "x-axis choice"
+                                on_active: root.update_axes_selection(self, self.active, "x", "frame")
+                            Label:
+                                text: "freq."
+                                background_color: (0,0,0,1)
+                            CheckBox:
+                                id: x_ax_freq
+                                group: "x-axis choice"
+                                on_active: root.update_axes_selection(self, self.active, "x", "freq")
+                        Label:
+                            text: "Grid:"
+                            size_hint_x: None
+                            width: self.parent.width * 0.15
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            Label:
+                                text: "From"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            TextInput:
+                                id: x_grid_from
+                                multiline: False
+                                disabled: x_grid_auto.active
+                                on_text: root.set_grid("x")
+                            Label:
+                                text: "To"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            TextInput:
+                                id: x_grid_to
+                                multiline: False
+                                disabled: x_grid_auto.active
+                                on_text: root.set_grid("x")
+                            Label:
+                                text: "Count"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            TextInput:
+                                id: x_grid_count
+                                multiline: False
+                                disabled: x_grid_auto.active
+                                on_text: root.set_grid("x")
+                            Label:
+                                text: "Auto"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.1
+                            CheckBox:
+                                id: x_grid_auto
+                                size_hint_x: None
+                                width: self.parent.width * 0.1
+                                active: True
+                                on_active: root.clear_grid(self, self.active, "x")
+                        Label:
+                            text: "Range:"
+                            size_hint_x: None
+                            width: self.parent.width * 0.15
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            Label:
+                                text: "From"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            TextInput:
+                                id: x_range_from
+                                multiline: False
+                                disabled: x_range_auto.active
+                                on_text: root.set_x_range("from")
+                            Label:
+                                text: "To"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            TextInput:
+                                id: x_range_to
+                                multiline: False
+                                disabled: x_range_auto.active
+                                on_text: root.set_x_range("to")
+                            Label:
+                                text: "Auto"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.1
+                            CheckBox:
+                                id: x_range_auto
+                                size_hint_x: None
+                                width: self.parent.width * 0.1
+                                active: True
+                                on_active: root.clear_x_range(self, self.active)
+                        Label:
+                            text: "Label:"
+                            size_hint_x: None
+                            width: self.parent.width * 0.15
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            TextInput:
+                                id: custom_xlabel
+                                multiline: False
+                                disabled: custom_xlabel_disabler.active
+                                on_text: root.set_custom_label("x")
+                            Label:
+                                text: "Auto"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.1
+                            CheckBox:
+                                id: custom_xlabel_disabler
+                                active: True
+                                on_active: root.clear_custom_label(self, self.active, "x")
+                                size_hint_x: None
+                                width: self.parent.width * 0.1
+
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.parent.height * 0.3
+                    Label:
+                        text: "y-axis"
+                        background_color: (0.5, 0.1, 0.1, 1)
+                        bold: True
+                        size_hint_y: None
+                        height: 30
+                    GridLayout:
+                        cols:2
+                        Label:
+                            text: "Axis:"
+                            size_hint_x: None
+                            width: self.parent.width * 0.15
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            Label:
+                                text: "angle"
+                                background_color: (0,0,0,1)
+                            CheckBox:
+                                group: "y-axis choice"
+                                id: y_ax_angle
+                                active: True
+                                disabled: False
+                                on_active: root.update_axes_selection(self, self.active, "y", "angle")
+                            Label:
+                                text: "angle_velocity"
+                                background_color: (0,0,0,1)
+                            CheckBox:
+                                group: "y-axis choice"
+                                id: y_ax_angVel
+                                disabled: False
+                                on_active: root.update_axes_selection(self, self.active, "y", "angVel")
+                        Label:
+                            text: "Grid:"
+                            size_hint_x: None
+                            width: self.parent.width * 0.15
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            Label:
+                                text: "From"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            TextInput:
+                                id: y_grid_from
+                                multiline: False
+                                disabled: y_grid_auto.active
+                                on_text: root.set_grid("y")
+                            Label:
+                                text: "To"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            TextInput:
+                                id: y_grid_to
+                                multiline: False
+                                disabled: y_grid_auto.active
+                                on_text: root.set_grid("y")
+                            Label:
+                                text: "Count"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            TextInput:
+                                id: y_grid_count
+                                multiline: False
+                                disabled: y_grid_auto.active
+                                on_text: root.set_grid("y")
+                            Label:
+                                text: "Auto"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.1
+                            CheckBox:
+                                id: y_grid_auto
+                                size_hint_x: None
+                                width: self.parent.width * 0.1
+                                active: True
+                                on_active: root.clear_grid(self, self.active, "y")
+                        Label:
+                            text: "Range:"
+                            size_hint_x: None
+                            width: self.parent.width * 0.15
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            Label:
+                                text: "From"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            TextInput:
+                                id: y_range_from
+                                multiline: False
+                                disabled: y_range_auto.active
+                                on_text: root.set_y_range("from")
+                            Label:
+                                text: "To"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            TextInput:
+                                id: y_range_to
+                                multiline: False
+                                disabled: y_range_auto.active
+                                on_text: root.set_y_range("to")
+                            Label:
+                                text: "Auto"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.1
+                            CheckBox:
+                                id: y_range_auto
+                                size_hint_x: None
+                                width: self.parent.width * 0.1
+                                active: True
+                                on_active: root.clear_y_range(self, self.active)
+                        Label:
+                            text: "Label:"
+                            size_hint_x: None
+                            width: self.parent.width * 0.15
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            TextInput:
+                                id: custom_ylabel
+                                multiline: False
+                                disabled: custom_ylabel_disabler.active
+                                on_text: root.set_custom_label("y")
+                            Label:
+                                text: "Auto"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.1
+                            CheckBox:
+                                id: custom_ylabel_disabler
+                                active: True
+                                on_active: root.clear_custom_label(self, self.active, "y")
+                                size_hint_x: None
+                                width: self.parent.width * 0.1
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.parent.height * 0.2
+                    Label:
+                        text: "General"
+                        background_color: (0.5, 0.1, 0.1, 1)
+                        bold: True
+                        size_hint_y: None
+                        height: 30
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        Label:
+                            text: "Eye(s):"
+                            size_hint_x: None
+                            width: self.parent.width * 0.2
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            size_hint_x: None
+                            width: self.parent.width * 0.4
+                            Label:
+                                text: "Left"
+                                background_color: (0,0,0,1)
+                            CheckBox:
+                                on_active: root.update_eye_selection(self, self.active, "left")
+                                active: True
+                            Label:
+                                text: "Right"
+                                background_color: (0,0,0,1)
+                            CheckBox:
+                                on_active: root.update_eye_selection(self, self.active, "right")
+                                active: True
+                        Label:
+                            text: "w.r.t. body:"
+                            size_hint_x: None
+                            width: self.parent.width * 0.2
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            size_hint_x: None
+                            width: self.parent.width * 0.2
+                            CheckBox:
+                                active: True
+                                on_active: root.update_wrtB(self, self.active)
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        Label:
+                            text: "Title:"
+                            size_hint_x: None
+                            width: self.parent.width * 0.2
+                        TextInput:
+                            id: graph_title
+                            multiline: False
+                            on_text: root.set_graph_title()
+
+                BoxLayout:
+                    orientation: 'vertical'
+                    height: self.parent.height * 0.2
+                    Button:
+                        text: "Generate"
+                        size_hint: None, None
+                        width: self.parent.width
+                        height: 50
+                        background_color: (1,1,1,1)
+                        on_press: root.generate_graph()

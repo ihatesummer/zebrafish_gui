@@ -29,6 +29,8 @@ def main(vid: str, IMAGE_PATH: str, VIDEO_PATH: str) -> None:
     img_dest_dir = join(IMAGE_PATH, vid)
     createFolder(img_dest_dir)
     createFolder(img_dest_dir+"_processed")
+    save_dest_dir = join(getcwd(), vid)
+    createFolder(save_dest_dir)
 
     # read first frame
     frame_counter = 0
@@ -52,7 +54,8 @@ def get_nFrames(VID_PATH, vid):
     return nFrames
 
 
-def main_decord(vid: str, IMG_PATH: str, VID_PATH: str,
+def main_decord(vid: str, IMG_PATH: str,
+                SAVE_PATH:str ,VID_PATH: str,
                 overwrite=False) -> None:
     """
     Extract frames from a video using decord's VideoReader. Faster than openCV
@@ -63,6 +66,7 @@ def main_decord(vid: str, IMG_PATH: str, VID_PATH: str,
     """
 
     createFolder(IMG_PATH)
+    createFolder(SAVE_PATH)
 
     # can set to ctx=cpu(0) or ctx=gpu(0)
     vr = VideoReader(join(VID_PATH, vid), ctx=cpu(0))
@@ -79,7 +83,4 @@ def main_decord(vid: str, IMG_PATH: str, VID_PATH: str,
 
 
 if __name__ == "__main__":
-    """
-    For debugging purposes
-    """
     print("WARNING: this is not the main module.")

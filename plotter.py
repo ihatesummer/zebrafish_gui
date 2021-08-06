@@ -1,29 +1,63 @@
 # %%
 import matplotlib.pyplot as plt
-from numpy import loadtxt, shape, set_printoptions
+from numpy import max, min, ndarray
 from os.path import join
-from os import getcwd
 
-set_printoptions(precision=1)
 
-vid_name = input("video name: ")
-DEST_PATH = join(getcwd(), "image", vid_name+"_processed")
-data_frame = loadtxt(join(DEST_PATH, "result.csv"), delimiter=',')
-data_frame = data_frame[data_frame[:, 0].argsort()]  # Sort by frame number
-frame_no = data_frame[:, 0]
-angle_eyeL = data_frame[:, -2]
-angle_eyeR = data_frame[:, -1]
-angle_body = data_frame[:, -3]
+def generate_blank(pathname):
+    _, ax = plt.subplots()
+    ax.set_xlim(xmin=0, xmax=1)
+    ax.set_ylim(ymin=-1, ymax=1)
+    ax.grid()
+    plt.xlabel("Select...")
+    plt.ylabel("Select...")
+    plt.savefig(pathname)
 
-fig, ax = plt.subplots()
-plt.plot(frame_no, angle_eyeL - angle_body,
-         label="left eye w.r.t body", linewidth=0.5)
-plt.plot(frame_no, angle_eyeR - angle_body,
-         label="right eye w.r.t body", linewidth=0.5)
-ax.set_xlim(xmin=0, xmax=max(frame_no))
-ax.set_ylim(ymin=-20, ymax=50)
-ax.grid()
-plt.xlabel("frame")
-plt.ylabel("angle (degree)")
-plt.legend(loc="upper right")
-plt.savefig(join(DEST_PATH, "result.png"))
+def main(output, x, x_label, x_range,
+         y_list, y_label, y_range,
+         custom_grid,
+         graph_title):
+    _, ax = plt.subplots()
+    if len(y_list) == 2:
+        labels = ["Left", "Right"]
+        colors = ["r", "g"]
+        for i, y_arr in enumerate(y_list):
+            ax.plot(x, y_arr,
+                    color=colors[i],
+                    label=labels[i],
+                    linewidth=0.5)
+            ax.legend()
+    elif len(y_list) == 1:
+        ax.plot(x, y_list[0], 'black', linewidth=1)
+
+    if x_range == [0, 0]:
+        ax.set_xlim(xmin=0, xmax=max(x))
+    else:
+        ax.set_xlim(xmin=x_range[0], xmax=x_range[1])
+
+    if y_range == [0, 0]:
+        ax.set_ylim(ymin=min(y_list)-10, ymax=max(y_list)+10)
+    else:
+        ax.set_ylim(ymin=y_range[0], ymax=y_range[1])
+
+    xgrid, ygrid = custom_grid
+    if all(type(g) != ndarray for g in custom_grid):
+        ax.grid()
+    else:
+        if type(xgrid) == ndarray:
+            ax.set_xticks(xgrid)
+            ax.xaxis.grid(True)
+        if type(ygrid) == ndarray:
+            ax.set_yticks(ygrid)
+            ax.yaxis.grid(True)
+
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    if graph_title != "":
+        ax.set_title(graph_title)
+    plt.savefig(output)  # png
+    plt.savefig(output[:-4]+".pdf")  # pdf
+    plt.close('all')
+
+if __name__ == "__main__":
+    print("WARNING: this is not the main module.")

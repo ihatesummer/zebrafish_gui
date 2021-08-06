@@ -111,6 +111,7 @@ def remove_non_eyes(eyes, diff_thresh, bDebug):
     """
     if bDebug:
         print(f"{len(eyes)} contours are found as potential eyes...")
+        print(f"Hu distance threshold: {diff_thresh}")
     remove_idx = array([], dtype=int)
     for i in range(len(eyes)):
         diff_list = []
@@ -499,7 +500,4 @@ def main(IMG_PATH: str,
     
 
 if __name__ == "__main__":
-    """
-    For debugging purposes
-    """
     print("WARNING: this is not the main module.")

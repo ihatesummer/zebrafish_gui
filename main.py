@@ -4,32 +4,20 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.properties import ObjectProperty
 from kivy.core.window import Window
 from kivy.lang import Builder
-from os import getcwd, listdir
-from os.path import join, normpath, basename
+from os import getcwd, listdir, remove
+from os.path import join, normpath, basename, exists
 from json import dump, load
-from numpy import vstack, savetxt
+from numpy import vstack, savetxt, count_nonzero, linspace, loadtxt
+from datetime import datetime
 import frame_extractor as vfe
 import angle_detector as ad
+import plotter as pt
 import kivy
 kivy.require('2.0.0')
 
 Builder.load_file('zebrafish.kv')
 Builder.load_file('processing.kv')
-
-class MainWindow(BoxLayout):
-    frame = ObjectProperty("0.png")
-    frame_processed = ObjectProperty("processed_0.png")
-    text_color = ObjectProperty([0, 0, 0, 1])
-    text_size_header = 20
-    text_size_label = 10
-
-    main = BoxLayout(orientation='vertical')
-    row1 = BoxLayout(orientation='horizontal')
-    row2 = BoxLayout(orientation='horizontal')
-    main.add_widget(row1)
-    main.add_widget(row2)
-    # row1.add_widget(ProcessingWindow)
-    # proc_window = ProcessingWindow()
+Builder.load_file('plotting.kv')
 
 
 class Processing(Widget):
@@ -37,6 +25,7 @@ class Processing(Widget):
     nFrames = 0
     vid_name = ""
     img_path = join(getcwd(), "images", vid_name)
+    save_path = join(getcwd(), "results", vid_name)
     frame = ObjectProperty(
         join(img_path, f"{frame_no}.png"))
     frame_processed = ObjectProperty(
@@ -110,7 +99,7 @@ class Processing(Widget):
             if "tpy" in keys:
                 self.TIMEBAR_YPOS_THRESH = int(self.ids.tpy.text)
             if "hd" in keys:
-                self.Hu_dist_thresh = int(self.ids.hd.text)
+                self.Hu_dist_thresh = float(self.ids.hd.text)
         except:
             pass
 
@@ -137,6 +126,7 @@ class Processing(Widget):
         try:
             vfe.main_decord(self.vid_name,
                             self.img_path,
+                            self.save_path,
                             'videos',
                             overwrite=True)
             self.nFrames = vfe.get_nFrames('videos',
@@ -155,6 +145,8 @@ class Processing(Widget):
         self.ids.vid_selected.text = 'Selected: "' + \
             self.vid_name + '"' + \
             f"  -  total {self.nFrames} frames"
+        self.save_path = join(
+            getcwd(), "results", self.vid_name)
         self.load_settings()
 
     def dec_frame(self):
@@ -192,6 +184,7 @@ class Processing(Widget):
         self.load_images()
 
     def save_settings(self):
+        vfe.createFolder(self.save_path)
         try:
             dict = {}
             settings = [self.fps,
@@ -207,7 +200,7 @@ class Processing(Widget):
             for item, item_name in zip(settings,
                                        self.settings_names):
                 dict[item_name] = item
-            file_name = join(self.img_path, "settings.json")
+            file_name = join(self.save_path, "settings.json")
             out_file = open(file_name, "w")
             dump(dict, out_file, indent=4)
             out_file.close()
@@ -216,7 +209,7 @@ class Processing(Widget):
 
     def load_settings(self):
         try:
-            file = join(self.img_path, "settings.json")
+            file = join(self.save_path, "settings.json")
             with open(file) as load_settings:
                 loaded = load(load_settings)
                 self.fps = loaded['fps']
@@ -232,7 +225,17 @@ class Processing(Widget):
             self.upload_properties_to_gui()
 
         except:
-            pass
+            self.fps = ""
+            self.TIMEBAR_YPOS_THRESH = ""
+            self.Hu_dist_thresh = ""
+            self.brt_bounds_eye = ["", ""]
+            self.len_bounds_eye = ["", ""]
+            self.brt_bounds_bladder = ["", ""]
+            self.len_bounds_bladder = ["", ""]
+            self.ins_offset_eyeL = ["", ""]
+            self.ins_offset_eyeR = ["", ""]
+            self.ins_offset_bladder = ["", ""]
+            self.upload_properties_to_gui()
 
     def angle_detection(self, frame):
         if frame == "all":
@@ -287,6 +290,9 @@ class Processing(Widget):
                 out_angle_L,
                 out_angle_R,
                 out_angle_B)
+            nDetected = count_nonzero(out_bDetected)
+            print(f"{self.nFrames - nDetected} out of",
+                  f"{self.nFrames} frames failed.")
 
         # test/debug mode
         else:
@@ -309,7 +315,11 @@ class Processing(Widget):
                  self.frame,
                  self.frame_processed,
                  bDebug)
-            print(bDetected, body_angle, eye_angle_L, eye_angle_R)
+            if(bDetected):
+                print(f"body_angle: {body_angle}")
+                print(f"eye_angle_L: {eye_angle_L}")
+                print(f"eye_angle_R: {eye_angle_R}")
+            self.load_images()
 
     def save_result(self, out_bDetected, out_frame_no,
                     out_angle_L, out_angle_R, out_angle_B):
@@ -318,20 +328,20 @@ class Processing(Widget):
         out_angle_wrtB_R = out_angle_R - out_angle_B
         out_angle_wrtB_L = self.fix_twisted_eyes(out_angle_wrtB_L)
         out_angle_wrtB_R = self.fix_twisted_eyes(out_angle_wrtB_R)
-        out_angVel_L = self.get_angVel(out_angle_L)
-        out_angVel_R = self.get_angVel(out_angle_R)
-        out_angVel_wrtB_L = self.get_angVel(out_angle_wrtB_L)
-        out_angVel_wrtB_R = self.get_angVel(out_angle_wrtB_R)
+        out_angVel_L = self.get_angVel(out_angle_L, out_time)
+        out_angVel_R = self.get_angVel(out_angle_R, out_time)
+        out_angVel_wrtB_L = self.get_angVel(out_angle_wrtB_L, out_time)
+        out_angVel_wrtB_R = self.get_angVel(out_angle_wrtB_R, out_time)
         detection_log = vstack(
             (out_frame_no, out_time, out_bDetected, out_angle_B,
              out_angle_L, out_angle_wrtB_L,
              out_angVel_L, out_angVel_wrtB_L,
              out_angle_R, out_angle_wrtB_R,
              out_angVel_R, out_angVel_wrtB_R)).T
-        header = "frame_no, time, bDetected, angle_B, \
-            angle_L, angle_wrtB_L, out_angVel_L, angVel_wrtB_L, \
-            angle_R, angle_wrtB_R, out_angVel_R, angVel_wrtB_R"
-        savetxt(join(self.img_path, "result.csv"),
+        header = "frame_no,time,bDetected,angle_B," + \
+            "angle_L,angle_wrtB_L,angVel_L,angVel_wrtB_L," + \
+            "angle_R,angle_wrtB_R,angVel_R,angVel_wrtB_R"
+        savetxt(join(self.save_path, "result.csv"),
                 detection_log, delimiter=',',
                 header=header)
     
@@ -341,24 +351,337 @@ class Processing(Widget):
                 angle_list[i] = angle-180
         return angle_list
 
-    def get_angVel(self, angle_list):
+    def get_angVel(self, angle_list, time):
         angVel_list = angle_list.copy()
         angVel_list[0] = 0
         for i in range(1, len(angVel_list)):
-            angVel_list[i] = angle_list[i] - angle_list[i-1]
+            angVel_list[i] = \
+                (angle_list[i] - angle_list[i-1]) / \
+                    (time[i] - time[i-1])
         return angVel_list
 
-class Data(BoxLayout):
-    pass
+class Plotting(Widget):
+    vid_name = ""
+    result_path = join(getcwd(), "results", vid_name)
+    data_file = ""
+    graph_file = ObjectProperty("")
+    eye_selection = ["left", "right"]
+    axes_selection = {
+        "x": "time",
+        "y": "angle"}
+    custom_label = ["", ""]
+    custom_grid = [None, None]
+    graph_title = ""
+    wrt_B = True
+    x_range = [0, 0]
+    y_range = [0, 0]
+    c_frame_no = None
+    c_time = None
+    c_bDetected = None
+    c_angle_B = None
+    c_angle_L = None
+    c_angle_wrtB_L = None
+    c_angVel_L = None
+    c_angVel_wrtB_L = None
+    c_angle_R = None
+    c_angle_wrtB_R = None
+    c_angVel_R = None
+    c_angVel_wrtB_R = None
 
-class Graph(Widget):
-    pass
+    def set_graph_title(self):
+        self.graph_title = self.ids.graph_title.text
+        print(self.graph_title)
+
+    def fetch_x(self):
+        if self.axes_selection["x"] == "frame":
+            x = self.c_frame_no
+            xlabel = "frame"
+        elif self.axes_selection["x"] == "time":
+            x = self.c_time
+            xlabel = "time [sec]"
+        elif self.axes_selection["x"] == "freq":
+            pass
+        else:
+            print("ERROR: No x-axis option selected.")
+        return x, xlabel
+
+    def fetch_y(self):
+        y_list = []
+        y_labels = []
+        y_selected = self.axes_selection["y"]
+        if "left" in self.eye_selection:
+            if self.wrt_B == True:
+                if y_selected == "angle":
+                    y_list.append(self.c_angle_wrtB_L)
+                    y_labels.append("angle [degree]")
+                elif y_selected == "angVel":
+                    y_list.append(self.c_angVel_wrtB_L)
+                    y_labels.append("angular velocity [degree/sec]")
+                elif y_selected == "fft":
+                    pass
+                else:
+                    print("ERROR: No y-axis option selected.")
+            else:
+                if y_selected == "angle":
+                    y_labels.append("angle [degree]")
+                    y_list.append(self.c_angle_L)
+                elif y_selected == "angVel":
+                    y_list.append(self.c_angVel_L)
+                    y_labels.append("angular velocity [degree/sec]")
+                elif y_selected == "fft":
+                    pass
+                else:
+                    print("ERROR: No y-axis option selected.")
+        if "right" in self.eye_selection:
+            if self.wrt_B == True:
+                if y_selected == "angle":
+                    y_list.append(self.c_angle_wrtB_R)
+                    y_labels.append("angle [degree]")
+                elif y_selected == "angVel":
+                    y_list.append(self.c_angVel_wrtB_R)
+                    y_labels.append("angular velocity [degree/sec]")
+                elif y_selected == "fft":
+                    pass
+                else:
+                    print("ERROR: No y-axis option selected.")
+            else:
+                if y_selected == "angle":
+                    y_list.append(self.c_angle_R)
+                    y_labels.append("angle [degree]")
+                elif y_selected == "angVel":
+                    y_list.append(self.c_angVel_R)
+                    y_labels.append("angular velocity [degree/sec]")
+                elif y_selected == "fft":
+                    pass
+                else:
+                    print("ERROR: No y-axis option selected.")
+        # two identical labels are appended during 
+        # the if/else statements above
+        y_label = y_labels[0]
+        return y_list, y_label
+
+    def generate_graph(self):
+        # try:
+        x, xlabel = self.fetch_x()
+        y, y_label = self.fetch_y()
+        now = datetime.now()
+        date_time = now.strftime("%Y_%m_%d-%H_%M_%S.png")
+        output = join(
+            self.result_path, date_time)
+        print(output)
+        pt.main(output,
+                x, xlabel, self.x_range,
+                y, y_label, self.y_range,
+                self.custom_grid,
+                self.graph_title)
+        self.graph_file = output
+        # except:
+        #     print("ERROR: invalid configuration(s).")
+
+    def update_wrtB(self, instance, value):
+        self.wrt_B = value
+        print(self.wrt_B)
+
+    def update_eye_selection(self, instance, value, LR):
+        if value == True:
+            self.eye_selection.append(LR)
+        else:
+            self.eye_selection.remove(LR)
+        print(self.eye_selection)
+
+    def set_x_range(self, idx):
+        try:
+            if idx == "from":
+                self.x_range[0] = int(self.ids.x_range_from.text)
+            elif idx == "to":
+                self.x_range[1] = int(self.ids.x_range_to.text)
+            else:
+                pass
+        except:
+            print("ERROR: Invalid input for x-axis range.")
+        print(self.x_range)
+
+    def clear_x_range(self, instance, value):
+        try:
+            if value == True:
+                self.x_range = [0, 0]
+            else:
+                self.x_range[0] = int(self.ids.x_range_from.text)
+                self.x_range[1] = int(self.ids.x_range_to.text)
+        except:
+            print("ERROR: Invalid input for x-axis range.")
+        print(self.x_range)
+
+    def set_y_range(self, idx):
+        try:
+            if idx == "from":
+                self.y_range[0] = int(self.ids.y_range_from.text)
+            elif idx == "to":
+                self.y_range[1] = int(self.ids.y_range_to.text)
+            else:
+                pass
+        except:
+            print("ERROR: Invalid input for y-axis range.")
+        print(self.y_range)
+
+    def clear_y_range(self, instance, value):
+        try:
+            if value == True:
+                self.y_range = [0, 0]
+            else:
+                self.y_range[0] = int(self.ids.y_range_from.text)
+                self.y_range[1] = int(self.ids.y_range_to.text)
+        except:
+            print("ERROR: Invalid input for x-axis range.")
+        print(self.y_range)
+
+    def set_grid(self, ax):
+        if ax == "x":
+            try:
+                a = int(self.ids.x_grid_from.text)
+                b = int(self.ids.x_grid_to.text)
+                c = int(self.ids.x_grid_count.text)
+                self.custom_grid[0] = linspace(a, b, c)
+            except:
+                self.custom_grid[0] = None
+        elif ax == "y":
+            try:
+                a = int(self.ids.y_grid_from.text)
+                b = int(self.ids.y_grid_to.text)
+                c = int(self.ids.y_grid_count.text)
+                self.custom_grid[1] = linspace(a, b, c)
+            except:
+                self.custom_grid[1] = None
+        else:
+            pass
+        print(self.custom_grid)
+
+    def clear_grid(self, instance, value, ax):
+        try:
+            if value == True:
+                if ax == "x":
+                    self.custom_grid[0] = None
+                elif ax == "y":
+                    self.custom_grid[1] = None
+                else:
+                    pass
+            else:
+                if ax == "x":
+                    self.set_grid("x")
+                elif ax == "y":
+                    self.set_grid("y")
+                else:
+                    pass
+        except:
+            pass
+        print(self.custom_grid)
+
+    def set_custom_label(self, ax):
+        if ax == "x":
+            self.custom_label[0] = self.ids.custom_xlabel.text
+        elif ax == "y":
+            self.custom_label[1] = self.ids.custom_ylabel.text
+        else:
+            pass
+        print(self.custom_label)
+
+    def clear_custom_label(self, instance, value, ax):
+        if value == True:
+            if ax == "x":
+                self.custom_label[0] = ""
+            elif ax == "y":
+                self.custom_label[1] = ""
+            else:
+                pass
+        else:
+            if ax == "x":
+                self.custom_label[0] = self.ids.custom_xlabel.text
+            elif ax == "y":
+                self.custom_label[1] = self.ids.custom_ylabel.text
+            else:
+                pass
+        print(self.custom_label)
+
+    def update_axes_selection(self, instance, value, axis, choice):
+        if value == True:
+            self.axes_selection[axis] = choice
+        else:
+            self.axes_selection[axis] = ""
+            # when frequency choice is disabled for x-axis,
+            # reset the y-axis choice.
+            if choice == "freq":
+                self.reset_y_ax_choice()
+
+        if self.axes_selection["x"] == "freq":
+            self.ids.y_ax_angle.disabled = True
+            self.ids.y_ax_angVel.disabled = True
+            self.axes_selection["y"] = "fft"
+            
+        else:
+            self.ids.y_ax_angle.disabled = False
+            self.ids.y_ax_angVel.disabled = False
+
+        if self.axes_selection["y"] == "angVel":
+            self.ids.x_ax_frame.disabled = True
+            self.ids.x_ax_freq.disabled = True
+            self.ids.x_ax_time.active = True
+            self.axes_selection["x"] = "time"
+        else:
+            self.ids.x_ax_frame.disabled = False
+            self.ids.x_ax_freq.disabled = False
+
+        print(self.axes_selection)
+
+    def reset_y_ax_choice(self):
+        if self.ids.y_ax_angle.active == True:
+            self.axes_selection["y"] = "angle"
+        elif self.ids.y_ax_angVel.active == True:
+            self.axes_selection["y"] = "angVel"
+        else:
+            self.axes_selection["y"] = ""
+
+    def select_vid(self):
+        vid_path = self.ids.filechooser.selection[0]
+        self.vid_name = basename(normpath(vid_path))
+        self.result_path = join(
+            getcwd(), "results", self.vid_name)
+        self.ids.vid_selected.text = \
+            'Selected: "' + self.vid_name + '"'
+        self.data_file = join(self.result_path, "result.csv")
+
+        default_graph = join(
+            self.result_path, ".blank.png")
+        if not exists(default_graph):
+            pt.generate_blank(default_graph)
+        self.graph_file = default_graph
+        self.load()
+    
+    def load(self):
+        data_frame = loadtxt(
+            self.data_file,
+            delimiter=',')
+
+        # Sort by frame number
+        data_frame = data_frame[
+            data_frame[:, 0].argsort()]
+        # Load each column
+        self.c_frame_no = data_frame[:, 0]
+        self.c_time = data_frame[:, 1]
+        self.c_bDetected = data_frame[:, 2]
+        self.c_angle_B = data_frame[:, 3]
+        self.c_angle_L = data_frame[:, 4]
+        self.c_angle_wrtB_L = data_frame[:, 5]
+        self.c_angVel_L = data_frame[:, 6]
+        self.c_angVel_wrtB_L = data_frame[:, 7]
+        self.c_angle_R = data_frame[:, 8]
+        self.c_angle_wrtB_R = data_frame[:, 9]
+        self.c_angVel_R = data_frame[:, 10]
+        self.c_angVel_wrtB_R = data_frame[:, 11]
 
 
 class ZebrafishApp(App):
     def build(self):
-        return Processing()
-
+        return Plotting()
 
 if __name__ == '__main__':
     Window.size = (1500, 900)
