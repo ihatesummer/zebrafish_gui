@@ -5,41 +5,56 @@
         size: root.width, root.height
         spacing: 10
         padding: 15
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: 30
+            Button:
+                id: goto_processing
+                text: "<"
+                bold: True
+                font_size: 30
+                size_hint_x: None
+                width: 200
+                on_release:
+                    app.root.current = "processing"
+                    root.manager.transition.direction = "right"
+            Label:
+                text: "Plotting Window"
+                bold: True
+                font_size: 20
+                size_hint_x: None
+                width: root.width - goto_processing.width
+        FileChooserListView:
+            id: filechooser
+            size_hint_y: None
+            height: 100
+            rootpath: "./videos"
+            padding: 20
+            on_selection: root.select_vid()
         Label:
-            text: "<Plotting Window>"
-            bold: True
-            font_size: 20
-            size_hint: None, None
-            size: root.width, 30
+            id: vid_selected
+            text: "Select a video from above ..."
+            size_hint_y: None
+            height: 30
         BoxLayout:
             orientation: 'horizontal'
             spacing: 10
-            BoxLayout:
-                orientation: 'vertical'
+
+            Image:
+                id: preview_graph
                 size_hint_x: None
                 width: root.width * 0.6
-                FileChooserListView:
-                    id: filechooser
-                    size_hint_y: None
-                    width: self.parent.width * 0.2
-                    rootpath: "./videos"
-                    padding: 20
-                    on_selection: root.select_vid()
-                Label:
-                    id: vid_selected
-                    text: "Select a video from above ..."
-                    size_hint_y: None
-                    height: 30
-                Image:
-                    id: preview_graph
-                    source: root.graph_file
-                    allow_stretch: True
+                source: root.graph_file
+                allow_stretch: True
 
 # Right Pane
             GridLayout:
                 cols: 1
-                spacing: 30
+                spacing: 10
                 padding: 10
+                size_hint_y: None
+                height: self.parent.height
                 BoxLayout:
                     orientation: 'vertical'
                     size_hint_y: None
@@ -100,7 +115,7 @@
                                 text: "To"
                                 background_color: (0,0,0,1)
                                 size_hint_x: None
-                                width: self.parent.width * 0.15
+                                width: self.parent.width * 0.1
                             TextInput:
                                 id: x_grid_to
                                 multiline: False
@@ -242,7 +257,7 @@
                                 text: "To"
                                 background_color: (0,0,0,1)
                                 size_hint_x: None
-                                width: self.parent.width * 0.15
+                                width: self.parent.width * 0.1
                             TextInput:
                                 id: y_grid_to
                                 multiline: False
@@ -384,11 +399,11 @@
 
                 BoxLayout:
                     orientation: 'vertical'
-                    height: self.parent.height * 0.2
+                    size_hint_y: None
+                    height: self.parent.height * 0.15
                     Button:
                         text: "Generate"
-                        size_hint: None, None
+                        size_hint_x: None
                         width: self.parent.width
-                        height: 50
                         background_color: (1,1,1,1)
                         on_press: root.generate_graph()

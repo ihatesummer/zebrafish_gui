@@ -5,12 +5,26 @@
         size: root.width, root.height
         spacing: 10
         padding: 5
-        Label:
-            text: "<Processing Window>"
-            bold: True
-            font_size: 20
-            size_hint: None, None
-            size: root.width, 30
+        BoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: 30
+            Label:
+                text: "Processing Window"
+                bold: True
+                font_size: 20
+                size_hint_x: None
+                width: root.width - goto_plotting.width
+            Button:
+                id: goto_plotting
+                text: ">"
+                bold: True
+                font_size: 30
+                size_hint_x: None
+                width: 200
+                on_release:
+                    app.root.current = "plotting"
+                    root.manager.transition.direction = "left"
         BoxLayout:
             orientation: "horizontal"
             size_hint_y: None
@@ -26,6 +40,12 @@
                 width: root.width/4
                 background_color: (1,1,1,1)
                 on_press: root.frame_extraction()
+        Label:
+            text: ""
+            id: progress_frame_extractor
+            size_hint: None, None
+            width: self.parent.width-10
+            height: 10
         BoxLayout:
             orientation: "horizontal"
             size_hint_y: None

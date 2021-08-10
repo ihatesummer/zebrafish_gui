@@ -1,26 +1,30 @@
 from kivy.app import App
 from kivy.uix.widget import Widget
-from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.properties import ObjectProperty
 from kivy.core.window import Window
 from kivy.lang import Builder
-from os import getcwd, listdir, remove
+from kivy.clock import Clock, mainthread
+from cv2 import imwrite, cvtColor, COLOR_RGB2BGR
+from os import getcwd, listdir
 from os.path import join, normpath, basename, exists
 from json import dump, load
-from numpy import vstack, savetxt, count_nonzero, linspace, loadtxt
+from numpy import (vstack, savetxt, count_nonzero,
+                   linspace, loadtxt, where, shape)
 from datetime import datetime
+from decord import VideoReader, cpu, gpu
+from numpy.lib.ufunclike import fix
 import frame_extractor as vfe
 import angle_detector as ad
 import plotter as pt
 import kivy
 kivy.require('2.0.0')
 
-Builder.load_file('zebrafish.kv')
-Builder.load_file('processing.kv')
-Builder.load_file('plotting.kv')
 
+class WindowManager(ScreenManager):
+    pass
 
-class Processing(Widget):
+class Processing(Screen):
     frame_no = 0
     nFrames = 0
     vid_name = ""
@@ -124,13 +128,26 @@ class Processing(Widget):
 
     def frame_extraction(self):
         try:
-            vfe.main_decord(self.vid_name,
-                            self.img_path,
-                            self.save_path,
-                            'videos',
-                            overwrite=True)
-            self.nFrames = vfe.get_nFrames('videos',
-                                        self.vid_name)
+            vfe.createFolder(self.img_path)
+            vfe.createFolder(self.save_path)
+
+            overwrite = False
+            # can set to ctx=cpu(0) or ctx=gpu(0)
+            vr = VideoReader(
+                join("videos", self.vid_name),
+                ctx=cpu(0))
+            for frame_counter in range(0, self.nFrames):
+                file_name = join(
+                    self.img_path,
+                    f"{frame_counter}.png")
+                if (not exists(file_name)) or overwrite:
+                    frame = vr[frame_counter]
+                    imwrite(file_name,
+                            cvtColor(frame.asnumpy(),
+                                     COLOR_RGB2BGR))
+                else:
+                    pass
+                print(f"{frame_counter+1} of {self.nFrames} extracted.")
         except:
             print("ERROR: No video is selected")
 
@@ -140,6 +157,8 @@ class Processing(Widget):
         self.frame_no = 0
         self.nFrames = vfe.get_nFrames('videos',
                                        self.vid_name)
+        self.ids.progress_frame_extractor.value = 0
+        self.ids.progress_frame_extractor.max = self.nFrames - 1
         self.ids.frame_slider.max = self.nFrames - 1
         self.load_images()
         self.ids.vid_selected.text = 'Selected: "' + \
@@ -328,10 +347,10 @@ class Processing(Widget):
         out_angle_wrtB_R = out_angle_R - out_angle_B
         out_angle_wrtB_L = self.fix_twisted_eyes(out_angle_wrtB_L)
         out_angle_wrtB_R = self.fix_twisted_eyes(out_angle_wrtB_R)
-        out_angVel_L = self.get_angVel(out_angle_L, out_time)
-        out_angVel_R = self.get_angVel(out_angle_R, out_time)
-        out_angVel_wrtB_L = self.get_angVel(out_angle_wrtB_L, out_time)
-        out_angVel_wrtB_R = self.get_angVel(out_angle_wrtB_R, out_time)
+        out_angVel_L = self.get_angVel(out_angle_L, 1/self.fps)
+        out_angVel_R = self.get_angVel(out_angle_R, 1/self.fps)
+        out_angVel_wrtB_L = self.get_angVel(out_angle_wrtB_L, 1/self.fps)
+        out_angVel_wrtB_R = self.get_angVel(out_angle_wrtB_R, 1/self.fps)
         detection_log = vstack(
             (out_frame_no, out_time, out_bDetected, out_angle_B,
              out_angle_L, out_angle_wrtB_L,
@@ -351,16 +370,16 @@ class Processing(Widget):
                 angle_list[i] = angle-180
         return angle_list
 
-    def get_angVel(self, angle_list, time):
+    def get_angVel(self, angle_list, deltaTime):
         angVel_list = angle_list.copy()
         angVel_list[0] = 0
         for i in range(1, len(angVel_list)):
             angVel_list[i] = \
                 (angle_list[i] - angle_list[i-1]) / \
-                    (time[i] - time[i-1])
+                    deltaTime
         return angVel_list
 
-class Plotting(Widget):
+class Plotting(Screen):
     vid_name = ""
     result_path = join(getcwd(), "results", vid_name)
     data_file = ""
@@ -460,23 +479,70 @@ class Plotting(Widget):
         y_label = y_labels[0]
         return y_list, y_label
 
+    def get_first_available(self, y_part, bDetected_part):
+        if bDetected_part[0] == True:
+            return y_part[0]
+        else:
+            # Recursion until available
+            return self.get_first_available(
+                y_part[1:], bDetected_part[1:]
+            )
+
+    def get_last_available(self, y_part, bDetected_part):
+        if bDetected_part[-1] == True:
+            return y_part[-1]
+        else:
+            # Recursion until available
+            return self.get_last_available(
+                y_part[:-1], bDetected_part[:-1]
+            )
+
+    def interpolate(self, y):
+        idx_last = int(max(self.c_frame_no))
+        if self.c_bDetected[0] == False:
+            y[0] = self.get_first_available(
+                        y[1:], self.c_bDetected[1:])
+        if self.c_bDetected[idx_last] == False:
+            y[idx_last] = self.get_last_available(
+                        y[:-1], self.c_bDetected[:-1])
+        for i in range (1, idx_last-1):
+            if self.c_bDetected[i] == False:
+                if len(y[:i]) == 1:
+                    prev = y[:i]
+                else:
+                    prev = self.get_last_available(
+                        y[:i], self.c_bDetected[:i])
+                if len(y[i+1:]) == 1:
+                    next = y[i+1:]
+                else:
+                    next = self.get_first_available(
+                        y[i+1:], self.c_bDetected[i+1:])
+                y[i] = (prev + next) / 2
+            else:
+                pass
+
     def generate_graph(self):
-        # try:
-        x, xlabel = self.fetch_x()
-        y, y_label = self.fetch_y()
-        now = datetime.now()
-        date_time = now.strftime("%Y_%m_%d-%H_%M_%S.png")
-        output = join(
-            self.result_path, date_time)
-        print(output)
-        pt.main(output,
-                x, xlabel, self.x_range,
-                y, y_label, self.y_range,
-                self.custom_grid,
-                self.graph_title)
-        self.graph_file = output
-        # except:
-        #     print("ERROR: invalid configuration(s).")
+        try:
+            x, xlabel = self.fetch_x()
+            y, y_label = self.fetch_y()
+
+            for i, y_arr in enumerate(y):
+                self.interpolate(y_arr)
+
+            now = datetime.now()
+            date_time = now.strftime("%Y_%m_%d-%H_%M_%S.png")
+            output = join(
+                self.result_path, date_time) 
+            pt.main(output,
+                    x, xlabel, self.x_range,
+                    y, y_label, self.y_range,
+                    self.custom_grid,
+                    self.custom_label,
+                    self.graph_title,
+                    self.c_bDetected)
+            self.graph_file = output
+        except:
+            print("ERROR: invalid configuration(s).")
 
     def update_wrtB(self, instance, value):
         self.wrt_B = value
@@ -657,31 +723,37 @@ class Plotting(Widget):
         self.load()
     
     def load(self):
-        data_frame = loadtxt(
-            self.data_file,
-            delimiter=',')
+        try:
+            data_frame = loadtxt(
+                self.data_file,
+                delimiter=',')
+            # Sort by frame number
+            data_frame = data_frame[
+                data_frame[:, 0].argsort()]
+            # Load each column
+            self.c_frame_no = data_frame[:, 0]
+            self.c_time = data_frame[:, 1]
+            self.c_bDetected = data_frame[:, 2]
+            self.c_angle_B = data_frame[:, 3]
+            self.c_angle_L = data_frame[:, 4]
+            self.c_angle_wrtB_L = data_frame[:, 5]
+            self.c_angVel_L = data_frame[:, 6]
+            self.c_angVel_wrtB_L = data_frame[:, 7]
+            self.c_angle_R = data_frame[:, 8]
+            self.c_angle_wrtB_R = data_frame[:, 9]
+            self.c_angVel_R = data_frame[:, 10]
+            self.c_angVel_wrtB_R = data_frame[:, 11]
+        except:
+            print("ERROR: Process result sheet not available.")
 
-        # Sort by frame number
-        data_frame = data_frame[
-            data_frame[:, 0].argsort()]
-        # Load each column
-        self.c_frame_no = data_frame[:, 0]
-        self.c_time = data_frame[:, 1]
-        self.c_bDetected = data_frame[:, 2]
-        self.c_angle_B = data_frame[:, 3]
-        self.c_angle_L = data_frame[:, 4]
-        self.c_angle_wrtB_L = data_frame[:, 5]
-        self.c_angVel_L = data_frame[:, 6]
-        self.c_angVel_wrtB_L = data_frame[:, 7]
-        self.c_angle_R = data_frame[:, 8]
-        self.c_angle_wrtB_R = data_frame[:, 9]
-        self.c_angVel_R = data_frame[:, 10]
-        self.c_angVel_wrtB_R = data_frame[:, 11]
-
+Builder.load_file('zebrafish.kv')
+Builder.load_file('processing.kv')
+Builder.load_file('plotting.kv')
+wm_kv = Builder.load_file('window_manager.kv')
 
 class ZebrafishApp(App):
     def build(self):
-        return Plotting()
+        return wm_kv
 
 if __name__ == '__main__':
     Window.size = (1500, 900)

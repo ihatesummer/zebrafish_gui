@@ -1,9 +1,7 @@
 # %%
-from cv2 import VideoCapture, imwrite, waitKey, cvtColor
-from cv2 import COLOR_RGB2BGR, CAP_PROP_FRAME_COUNT
-from os import makedirs, listdir, getcwd
+from cv2 import VideoCapture, imwrite, waitKey, CAP_PROP_FRAME_COUNT
+from os import makedirs, getcwd
 from os.path import exists, join
-from decord import VideoReader, cpu, gpu
 
 
 def createFolder(dir: str) -> None:
@@ -52,35 +50,6 @@ def get_nFrames(VID_PATH, vid):
     vc = VideoCapture(join(VID_PATH, vid))
     nFrames = int(vc.get(CAP_PROP_FRAME_COUNT)) - 1
     return nFrames
-
-
-def main_decord(vid: str, IMG_PATH: str,
-                SAVE_PATH:str ,VID_PATH: str,
-                overwrite=False) -> None:
-    """
-    Extract frames from a video using decord's VideoReader. Faster than openCV
-    :param vid: file name of the video
-    :param IMAGE_PATH: the directory to save the frames
-    :param VIDEO_PATH: the directory where the video file exists
-    :param overwrite: to overwrite frames that already exist?
-    """
-
-    createFolder(IMG_PATH)
-    createFolder(SAVE_PATH)
-
-    # can set to ctx=cpu(0) or ctx=gpu(0)
-    vr = VideoReader(join(VID_PATH, vid), ctx=cpu(0))
-    start = 0
-    nFrames = get_nFrames(VID_PATH, vid)
-    for frame_counter in range(start, nFrames):
-        file_name = join(IMG_PATH, f"{frame_counter}.png")
-        if (not exists(file_name)) or overwrite:
-            frame = vr[frame_counter]
-            imwrite(file_name, cvtColor(frame.asnumpy(), COLOR_RGB2BGR))
-            print(f"Frame {frame_counter} of {nFrames-1} saved")
-        else:
-            print(f"Frame {frame_counter} of {nFrames-1} skipped")
-
 
 if __name__ == "__main__":
     print("WARNING: this is not the main module.")

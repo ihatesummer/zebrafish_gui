@@ -480,11 +480,11 @@ def main(IMG_PATH: str,
         right_eye_idx = argmin(angles_eye2blad)
     eyeL_angle = eye_angles[left_eye_idx]
     eyeR_angle = eye_angles[right_eye_idx]
-    inscribe_angle(inscribed_img, eyeL_angle,
+    inscribe_angle(inscribed_img, eyeL_angle-body_angle,
                    eye_centers[left_eye_idx],
                    inscription_pos_offset_eyeL,
                    0.5, BLUE, 1)
-    inscribe_angle(inscribed_img, eyeR_angle,
+    inscribe_angle(inscribed_img, eyeR_angle-body_angle,
                    eye_centers[right_eye_idx],
                    inscription_pos_offset_eyeR,
                    0.5, BLUE, 1)

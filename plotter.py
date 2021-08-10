@@ -15,8 +15,8 @@ def generate_blank(pathname):
 
 def main(output, x, x_label, x_range,
          y_list, y_label, y_range,
-         custom_grid,
-         graph_title):
+         custom_grid, custom_label,
+         graph_title, bDetected):
     _, ax = plt.subplots()
     if len(y_list) == 2:
         labels = ["Left", "Right"]
@@ -51,8 +51,15 @@ def main(output, x, x_label, x_range,
             ax.set_yticks(ygrid)
             ax.yaxis.grid(True)
 
-    ax.set_xlabel(x_label)
-    ax.set_ylabel(y_label)
+    if custom_label[0] != "":
+        ax.set_xlabel(custom_label[0])
+    else:
+        ax.set_xlabel(x_label)
+    if custom_label[1] != "":
+        ax.set_ylabel(custom_label[1])
+    else:
+        ax.set_ylabel(y_label)
+
     if graph_title != "":
         ax.set_title(graph_title)
     plt.savefig(output)  # png
