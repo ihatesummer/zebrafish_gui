@@ -140,6 +140,7 @@
                     width: self.parent.width
                     height: self.parent.height*10/16
                     spacing: 1
+
                     Label:
                         text: "Detection Properties"
                         size_hint_y: None
@@ -376,8 +377,8 @@
                     Button:
                         text: "Process this frame (Test settings)"
                         background_color: (1, 1, 1, 1)
-                        on_press: root.angle_detection(root.frame_no)
+                        on_press: root.detection(root.frame_no)
                     Button:
                         text: "Process whole video"
                         background_color: (1, 1, 1, 1)
-                        on_press: root.angle_detection("all")
+                        on_press: root.detection("all")

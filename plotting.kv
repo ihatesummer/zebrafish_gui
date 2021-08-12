@@ -58,7 +58,7 @@
                 BoxLayout:
                     orientation: 'vertical'
                     size_hint_y: None
-                    height: self.parent.height * 0.3
+                    height: self.parent.height * 0.25
                     Label:
                         text: "x-axis"
                         background_color: (0.5, 0.1, 0.1, 1)
@@ -95,6 +95,43 @@
                                 id: x_ax_freq
                                 group: "x-axis choice"
                                 on_active: root.update_axes_selection(self, self.active, "x", "freq")
+                        Label:
+                            text: "Range:"
+                            size_hint_x: None
+                            width: self.parent.width * 0.15
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            Label:
+                                text: "From"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            TextInput:
+                                id: x_range_from
+                                multiline: False
+                                disabled: x_range_auto.active
+                                on_text: root.set_x_range("from")
+                            Label:
+                                text: "To"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            TextInput:
+                                id: x_range_to
+                                multiline: False
+                                disabled: x_range_auto.active
+                                on_text: root.set_x_range("to")
+                            Label:
+                                text: "Auto"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.1
+                            CheckBox:
+                                id: x_range_auto
+                                size_hint_x: None
+                                width: self.parent.width * 0.1
+                                active: True
+                                on_active: root.clear_x_range(self, self.active)
                         Label:
                             text: "Grid:"
                             size_hint_x: None
@@ -143,43 +180,6 @@
                                 active: True
                                 on_active: root.clear_grid(self, self.active, "x")
                         Label:
-                            text: "Range:"
-                            size_hint_x: None
-                            width: self.parent.width * 0.15
-                        BoxLayout:
-                            orientation: 'horizontal'
-                            Label:
-                                text: "From"
-                                background_color: (0,0,0,1)
-                                size_hint_x: None
-                                width: self.parent.width * 0.15
-                            TextInput:
-                                id: x_range_from
-                                multiline: False
-                                disabled: x_range_auto.active
-                                on_text: root.set_x_range("from")
-                            Label:
-                                text: "To"
-                                background_color: (0,0,0,1)
-                                size_hint_x: None
-                                width: self.parent.width * 0.15
-                            TextInput:
-                                id: x_range_to
-                                multiline: False
-                                disabled: x_range_auto.active
-                                on_text: root.set_x_range("to")
-                            Label:
-                                text: "Auto"
-                                background_color: (0,0,0,1)
-                                size_hint_x: None
-                                width: self.parent.width * 0.1
-                            CheckBox:
-                                id: x_range_auto
-                                size_hint_x: None
-                                width: self.parent.width * 0.1
-                                active: True
-                                on_active: root.clear_x_range(self, self.active)
-                        Label:
                             text: "Label:"
                             size_hint_x: None
                             width: self.parent.width * 0.15
@@ -205,7 +205,7 @@
                 BoxLayout:
                     orientation: 'vertical'
                     size_hint_y: None
-                    height: self.parent.height * 0.3
+                    height: self.parent.height * 0.25
                     Label:
                         text: "y-axis"
                         background_color: (0.5, 0.1, 0.1, 1)
@@ -230,13 +230,66 @@
                                 disabled: False
                                 on_active: root.update_axes_selection(self, self.active, "y", "angle")
                             Label:
-                                text: "angle_velocity"
+                                text: "angVel"
                                 background_color: (0,0,0,1)
                             CheckBox:
                                 group: "y-axis choice"
                                 id: y_ax_angVel
                                 disabled: False
                                 on_active: root.update_axes_selection(self, self.active, "y", "angVel")
+                            Label:
+                                text: "area"
+                                background_color: (0,0,0,1)
+                            CheckBox:
+                                group: "y-axis choice"
+                                id: y_ax_area
+                                disabled: False
+                                on_active: root.update_axes_selection(self, self.active, "y", "area")
+                            Label:
+                                text: "axRatio"
+                                background_color: (0,0,0,1)
+                            CheckBox:
+                                group: "y-axis choice"
+                                id: y_ax_axRatio
+                                disabled: False
+                                on_active: root.update_axes_selection(self, self.active, "y", "axRatio")
+                        Label:
+                            text: "Range:"
+                            size_hint_x: None
+                            width: self.parent.width * 0.15
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            Label:
+                                text: "From"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            TextInput:
+                                id: y_range_from
+                                multiline: False
+                                disabled: y_range_auto.active
+                                on_text: root.set_y_range("from")
+                            Label:
+                                text: "To"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            TextInput:
+                                id: y_range_to
+                                multiline: False
+                                disabled: y_range_auto.active
+                                on_text: root.set_y_range("to")
+                            Label:
+                                text: "Auto"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.1
+                            CheckBox:
+                                id: y_range_auto
+                                size_hint_x: None
+                                width: self.parent.width * 0.1
+                                active: True
+                                on_active: root.clear_y_range(self, self.active)
                         Label:
                             text: "Grid:"
                             size_hint_x: None
@@ -285,43 +338,6 @@
                                 active: True
                                 on_active: root.clear_grid(self, self.active, "y")
                         Label:
-                            text: "Range:"
-                            size_hint_x: None
-                            width: self.parent.width * 0.15
-                        BoxLayout:
-                            orientation: 'horizontal'
-                            Label:
-                                text: "From"
-                                background_color: (0,0,0,1)
-                                size_hint_x: None
-                                width: self.parent.width * 0.15
-                            TextInput:
-                                id: y_range_from
-                                multiline: False
-                                disabled: y_range_auto.active
-                                on_text: root.set_y_range("from")
-                            Label:
-                                text: "To"
-                                background_color: (0,0,0,1)
-                                size_hint_x: None
-                                width: self.parent.width * 0.15
-                            TextInput:
-                                id: y_range_to
-                                multiline: False
-                                disabled: y_range_auto.active
-                                on_text: root.set_y_range("to")
-                            Label:
-                                text: "Auto"
-                                background_color: (0,0,0,1)
-                                size_hint_x: None
-                                width: self.parent.width * 0.1
-                            CheckBox:
-                                id: y_range_auto
-                                size_hint_x: None
-                                width: self.parent.width * 0.1
-                                active: True
-                                on_active: root.clear_y_range(self, self.active)
-                        Label:
                             text: "Label:"
                             size_hint_x: None
                             width: self.parent.width * 0.15
@@ -346,7 +362,7 @@
                 BoxLayout:
                     orientation: 'vertical'
                     size_hint_y: None
-                    height: self.parent.height * 0.2
+                    height: self.parent.height * 0.25
                     Label:
                         text: "General"
                         background_color: (0.5, 0.1, 0.1, 1)
@@ -389,6 +405,50 @@
                     BoxLayout:
                         orientation: 'horizontal'
                         Label:
+                            text: "Color(s):"
+                            size_hint_x: None
+                            width: self.parent.width * 0.2
+                        Label:
+                            text: "Left:"
+                            background_color: (0,0,0,1)
+                        TextInput:
+                            id: graph_color_left
+                            text: "blue"
+                            multiline: False
+                            on_text: root.set_custom_colors()
+                        Label:
+                            text: "Right:"
+                            background_color: (0,0,0,1)
+                        TextInput:
+                            id: graph_color_right
+                            text: "green"
+                            multiline: False
+                            on_text: root.set_custom_colors()
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        Label:
+                            text: "Label(s):"
+                            size_hint_x: None
+                            width: self.parent.width * 0.2
+                        Label:
+                            text: "Left:"
+                            background_color: (0,0,0,1)
+                        TextInput:
+                            id: graph_label_left
+                            text: "Left"
+                            multiline: False
+                            on_text: root.set_custom_eye_label("left")
+                        Label:
+                            text: "Right:"
+                            background_color: (0,0,0,1)
+                        TextInput:
+                            id: graph_label_right
+                            text: "Right"
+                            multiline: False
+                            on_text: root.set_custom_eye_label("right")
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        Label:
                             text: "Title:"
                             size_hint_x: None
                             width: self.parent.width * 0.2
@@ -400,7 +460,7 @@
                 BoxLayout:
                     orientation: 'vertical'
                     size_hint_y: None
-                    height: self.parent.height * 0.15
+                    height: self.parent.height * 0.1
                     Button:
                         text: "Generate"
                         size_hint_x: None

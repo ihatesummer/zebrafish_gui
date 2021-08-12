@@ -3,49 +3,37 @@ from os.path import exists
 from os import remove
 from datetime import datetime
 import matplotlib.pyplot as plt
+from scipy.fft import fft, fftfreq, rfft, rfftfreq
+data_frame = np.loadtxt(
+    r"C:\fish_gui\results\B13WT_1_c1m_30hz_js_5rpm_70mm-1.avi\result.csv",
+    delimiter=',')
+# Sort by frame number
+data_frame = data_frame[
+    data_frame[:, 0].argsort()]
+# Load each column
+c_frame_no = data_frame[:, 0]
+c_time = data_frame[:, 1]
+c_bDetected = data_frame[:, 2]
+c_angle_B = data_frame[:, 3]
+c_angle_L = data_frame[:, 4]
+c_angle_wrtB_L = data_frame[:, 5]
+c_angVel_L = data_frame[:, 6]
+c_angVel_wrtB_L = data_frame[:, 7]
+c_angle_R = data_frame[:, 8]
+c_angle_wrtB_R = data_frame[:, 9]
+c_angVel_R = data_frame[:, 10]
+c_angVel_wrtB_R = data_frame[:, 11]
 
+nSamples = int(max(c_frame_no))
+print("nSamples:", nSamples)
+sample_interval = c_time[1]
+print("sample interval:", sample_interval)
+freq = rfftfreq(nSamples, sample_interval)
+print("freq:", freq)
 
+wave = c_angle_wrtB_L
+norm_wave = (wave / len(wave))
+yf = rfft(norm_wave)
 
-def get_first_available(y_part, bDetected_part):
-    if bDetected_part[0] == True:
-        return y_part[0]
-    else:
-        # Recursion until available
-        return get_first_available(
-            y_part[1:], bDetected_part[1:]
-        )
-
-def get_last_available(y_part, bDetected_part):
-    if bDetected_part[-1] == True:
-        return y_part[-1]
-    else:
-        # Recursion until available
-        return get_last_available(
-            y_part[:-1], bDetected_part[:-1]
-        )
-
-a = np.array([0.0, 2, 4, 0, 0])
-b = a!=0
-print(f"a: {a}")
-print(f"b: {b}")
-if b[0] == False:
-    a[0] = get_first_available(a[1:], b[1:])
-if b[4] == False:
-    a[4] = get_last_available(a[:-1], b[:-1])
-print(f"first and last fixed a: {a}")
-for i in range (1, len(a)-1):
-    if b[i] == False:
-        if len(a[:i]) == 1:
-            prev = a[:i]
-        else: 
-            prev = get_last_available(
-                a[:i], b[:i])
-        if len(a[i+1:]) == 1:
-            next = a[i+1:]
-        else:
-            next = get_first_available(
-                    a[i+1:], b[i+1:])
-        a[i] = (prev + next) / 2
-print(f"interpolated a: {a}")
-a2 = a
-print(np.where(a!=a2)[0])
+plt.plot(freq, np.abs(yf), 'brown')
+plt.show()

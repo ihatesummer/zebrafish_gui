@@ -4,19 +4,17 @@ from cv2 import (
     destroyAllWindows, cvtColor,
     inRange, findContours, drawContours,
     matchShapes, ellipse, fitEllipse,
-    circle, line, putText,
+    circle, line, putText, contourArea,
     COLOR_BGR2GRAY, RETR_EXTERNAL,
     CHAIN_APPROX_NONE, CONTOURS_MATCH_I1,
     FONT_HERSHEY_SIMPLEX, LINE_AA
     )
 from numpy import (
     delete, array, argmax, argmin, 
-    zeros, shape, vstack, append)
-from numpy import degrees, arctan, arctan2, savetxt
+    zeros, shape, append)
+from numpy import degrees, arctan2
 from numpy.linalg import norm
 from math import sin, cos, radians, degrees
-from os import listdir
-from os.path import join
 from re import findall
 
 # Color space: (B, G, R)
@@ -158,12 +156,11 @@ def inscribe_major_axis(result, xc, yc,
          (int(xbot), int(ybot)), color, thickness)
 
 
-def inscribe_angle(result, angle, center,
-                   pos_offset, fontsize,
-                   color, thickness):
+def inscribe_text(result, text, center,
+             pos_offset, fontsize,
+             color, thickness):
     xc, yc = center
     offset_x, offset_y = pos_offset
-    text = f'{angle:.2f} deg'
     org = (int(xc+offset_x), int(yc+offset_y))  # bottom-left corner of text
     result = putText(result, text, org,
                      FONT_HERSHEY_SIMPLEX, fontsize,
@@ -229,18 +226,34 @@ def alloc_result_space(nFrames):
     out_bDetected = zeros(nFrames) < 1
     # int, from 0 to nFrames-1
     out_frame_no = zeros(nFrames)
+    # float, body eye angle [degree]
+    out_angle_B= zeros(nFrames)
     # float, left eye angle [degree]
     out_angle_L = zeros(nFrames)
     # float, right eye angle [degree]
     out_angle_R = zeros(nFrames)
-    # float, body eye angle [degree]
-    out_angle_B= zeros(nFrames)
+    # float, left eye area
+    out_area_L = zeros(nFrames)
+    # float, right eye area
+    out_area_R= zeros(nFrames)
+    # float, left eye minor axis length
+    out_ax_min_L = zeros(nFrames)
+    # float, left eye major axis length
+    out_ax_maj_L = zeros(nFrames)
+    # float, right eye minor axis length
+    out_ax_min_R = zeros(nFrames)
+    # float, right eye major axis length
+    out_ax_maj_R = zeros(nFrames)
 
     return (out_bDetected, out_frame_no,
+            out_angle_B,
             out_angle_L, out_angle_R,
-            out_angle_B)
+            out_area_L, out_area_R,
+            out_ax_min_L, out_ax_maj_L,
+            out_ax_min_R, out_ax_maj_R)
 
-def get_angle2(ref_point, measure_point):
+
+def get_angle(ref_point, measure_point):
     # since y-axis is flipped in CV.
     yDiff = -(measure_point[1]-ref_point[1])
     xDiff = measure_point[0]-ref_point[0]
@@ -249,20 +262,21 @@ def get_angle2(ref_point, measure_point):
         angle += 360
     return angle
 
-def main(IMG_PATH: str,
-         TIMEBAR_YPOS_THRESH: int,
-         brt_bounds_eye,
-         len_bounds_eye,
-         brt_bounds_bladder,
-         len_bounds_bladder,
-         Hu_dist_thresh,
-         inscription_pos_offset_eyeL,
-         inscription_pos_offset_eyeR,
-         inscription_pos_offset_bladder,
-         img_input,
-         img_output,
-         bDebug,
-         crop_ratio=-1):
+
+def main(
+        TIMEBAR_YPOS_THRESH: int,
+        brt_bounds_eye,
+        len_bounds_eye,
+        brt_bounds_bladder,
+        len_bounds_bladder,
+        Hu_dist_thresh,
+        inscription_pos_offset_eyeL,
+        inscription_pos_offset_eyeR,
+        inscription_pos_offset_bladder,
+        img_input,
+        img_output,
+        bDebug,
+        crop_ratio=-1):
     """
     Inscribes the eyes and body angles onto the pictures
     and also saves as a csv file
@@ -291,7 +305,7 @@ def main(IMG_PATH: str,
             img = crop_image(img, crop_hor, crop_vert)
         else:
             print("Error: Wrong input for crop_ratio."
-                    "Refer to crop_image() function input description.")
+                  "Refer to crop_image() function input description.")
     
     # Eyes
     img_bin_brt = get_binary_brightness(img, brt_bounds_eye)
@@ -433,20 +447,26 @@ def main(IMG_PATH: str,
             imshow(f'Detected bladder for {img_input}', img_len_fil_con)
             waitKey(0)
             destroyAllWindows()
-
+    
     inscribed_img = img.copy()
+
     eye_centers = []
     eye_angles = []
+    eye_areas = []
+    eye_ax_mins = []
+    eye_ax_majs = []
     for eye in filtered_cnt_eyes:
         my_ellipse = fitEllipse(eye)
         [xc, yc], [d1, d2], min_ax_angle = my_ellipse
         angle = correct_angle(min_ax_angle)
         eye_centers.append([xc, yc])
         eye_angles.append(angle)
-
+        eye_areas.append(contourArea(eye))
+        eye_ax_mins.append(d1)
+        eye_ax_majs.append(d2)
         ellipse(inscribed_img, my_ellipse, BLUE, 2)
         circle(inscribed_img, (int(xc), int(yc)),
-               2, BLUE, 3)
+            2, BLUE, 3)
         inscribe_major_axis(inscribed_img, xc, yc,
                             d1, d2, angle, BLUE, 1)
     
@@ -457,16 +477,20 @@ def main(IMG_PATH: str,
     point_btwn_eyes = get_midpoint(eye_centers[0], eye_centers[1])
     circle(inscribed_img, point_btwn_eyes, 2, BLUE, 3)
 
-    body_angle = get_angle2(ref_point=bladder_center,
+    body_angle = get_angle(ref_point=bladder_center,
                             measure_point=point_btwn_eyes)
 
-    inscribe_angle(inscribed_img, body_angle, bladder_center,
-                   inscription_pos_offset_bladder, 0.5, BLUE, 1)
+    inscribe_text(
+        inscribed_img,
+        f'{body_angle:.2f} deg',
+        bladder_center,
+        inscription_pos_offset_bladder,
+        0.5, BLUE, 1)
     line(inscribed_img, point_btwn_eyes, bladder_center, BLUE, 1)
 
     angles_eye2blad = [0, 0]
     for i, eye_center in enumerate(eye_centers):
-        angles_eye2blad[i] = get_angle2(
+        angles_eye2blad[i] = get_angle(
             ref_point=bladder_center,
             measure_point=eye_center)
         # print(f"angle_eye2blad[{i}]: {angles_eye2blad[i]}]")
@@ -480,14 +504,40 @@ def main(IMG_PATH: str,
         right_eye_idx = argmin(angles_eye2blad)
     eyeL_angle = eye_angles[left_eye_idx]
     eyeR_angle = eye_angles[right_eye_idx]
-    inscribe_angle(inscribed_img, eyeL_angle-body_angle,
-                   eye_centers[left_eye_idx],
-                   inscription_pos_offset_eyeL,
-                   0.5, BLUE, 1)
-    inscribe_angle(inscribed_img, eyeR_angle-body_angle,
-                   eye_centers[right_eye_idx],
-                   inscription_pos_offset_eyeR,
-                   0.5, BLUE, 1)
+    eyeL_area = eye_areas[left_eye_idx]
+    eyeR_area = eye_areas[right_eye_idx]
+    eyeL_ax_min = eye_ax_mins[left_eye_idx]
+    eyeR_ax_min = eye_ax_mins[right_eye_idx]
+    eyeL_ax_maj = eye_ax_majs[left_eye_idx]
+    eyeR_ax_maj = eye_ax_majs[right_eye_idx]
+    inscribe_text(
+        inscribed_img,
+        f'{eyeL_angle-body_angle:.2f} deg',
+        eye_centers[left_eye_idx],
+        inscription_pos_offset_eyeL,
+        0.5, BLUE, 1)
+    inscribe_text(
+        inscribed_img,
+        f'{eyeR_angle-body_angle:.2f} deg',
+        eye_centers[right_eye_idx],
+        inscription_pos_offset_eyeR,
+        0.5, BLUE, 1)
+    areaOffsetL = inscription_pos_offset_eyeL.copy()
+    areaOffsetL[1] += 20
+    inscribe_text(
+        inscribed_img,
+        f'{eyeL_area:.2f}',
+        eye_centers[left_eye_idx],
+        areaOffsetL,
+        0.5, GREEN, 1)
+    areaOffsetR = inscription_pos_offset_eyeR.copy()
+    areaOffsetR[1] += 20
+    inscribe_text(
+        inscribed_img,
+        f'{eyeR_area:.2f}',
+        eye_centers[right_eye_idx],
+        areaOffsetR,
+        0.5, GREEN, 1)
 
     if bDebug:
         imshow("fish_eyes", inscribed_img)
@@ -495,7 +545,11 @@ def main(IMG_PATH: str,
         destroyAllWindows()
 
     imwrite(img_output, inscribed_img)
-    return bDetected, body_angle, eyeL_angle, eyeR_angle
+    return (bDetected, body_angle,
+            eyeL_angle, eyeR_angle,
+            eyeL_area, eyeR_area,
+            eyeL_ax_min, eyeL_ax_maj,
+            eyeR_ax_min, eyeR_ax_maj)
 
     
 

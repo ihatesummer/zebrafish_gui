@@ -1,21 +1,19 @@
 from kivy.app import App
-from kivy.uix.widget import Widget
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.properties import ObjectProperty
 from kivy.core.window import Window
 from kivy.lang import Builder
-from kivy.clock import Clock, mainthread
 from cv2 import imwrite, cvtColor, COLOR_RGB2BGR
 from os import getcwd, listdir
 from os.path import join, normpath, basename, exists
 from json import dump, load
-from numpy import (vstack, savetxt, count_nonzero,
-                   linspace, loadtxt, where, shape)
+from numpy import (abs, vstack, savetxt, count_nonzero,
+                   linspace, loadtxt, shape, mean)
+from scipy.fft import rfft, rfftfreq
 from datetime import datetime
 from decord import VideoReader, cpu, gpu
-from numpy.lib.ufunclike import fix
 import frame_extractor as vfe
-import angle_detector as ad
+import detector as d
 import plotter as pt
 import kivy
 kivy.require('2.0.0')
@@ -56,6 +54,7 @@ class Processing(Screen):
                       "ins_offset_eyeL",
                       "ins_offset_eyeR",
                       "ins_offset_bladder"]
+
 
     def set_properties(self, key):
         try:
@@ -256,7 +255,7 @@ class Processing(Screen):
             self.ins_offset_bladder = ["", ""]
             self.upload_properties_to_gui()
 
-    def angle_detection(self, frame):
+    def detection(self, frame):
         if frame == "all":
             bDebug = False
             file_list = []
@@ -270,12 +269,18 @@ class Processing(Screen):
                       "Please extract the frames first.")
             (out_bDetected,
              out_frame_no,
+             out_angle_B,
              out_angle_L,
              out_angle_R,
-             out_angle_B) = ad.alloc_result_space(
+             out_area_L,
+             out_area_R,
+             out_ax_min_L,
+             out_ax_maj_L,
+             out_ax_min_R,
+             out_ax_maj_R) = d.alloc_result_space(
                  self.nFrames)
             for i, file in enumerate(file_list):
-                out_frame_no[i] = ad.get_frame_no(file)
+                out_frame_no[i] = d.get_frame_no(file)
                 img_input = join(self.img_path,
                                  file)
                 img_output = join(self.img_path,
@@ -283,8 +288,13 @@ class Processing(Screen):
                 (out_bDetected[i],
                  out_angle_B[i],
                  out_angle_L[i],
-                 out_angle_R[i]) = ad.main(
-                    self.img_path,
+                 out_angle_R[i],
+                 out_area_L[i],
+                 out_area_R[i],
+                 out_ax_min_L[i],
+                 out_ax_maj_L[i],
+                 out_ax_min_R[i],
+                 out_ax_maj_R[i]) = d.main(
                     self.TIMEBAR_YPOS_THRESH,
                     self.brt_bounds_eye,
                     self.len_bounds_eye,
@@ -306,9 +316,15 @@ class Processing(Screen):
             self.save_result(
                 out_bDetected,
                 out_frame_no,
+                out_angle_B,
                 out_angle_L,
                 out_angle_R,
-                out_angle_B)
+                out_area_L,
+                out_area_R,
+                out_ax_min_L,
+                out_ax_maj_L,
+                out_ax_min_R,
+                out_ax_maj_R)
             nDetected = count_nonzero(out_bDetected)
             print(f"{self.nFrames - nDetected} out of",
                   f"{self.nFrames} frames failed.")
@@ -319,9 +335,14 @@ class Processing(Screen):
             (bDetected,
              body_angle,
              eye_angle_L,
-             eye_angle_R
-             ) = ad.main(
-                 self.img_path,
+             eye_angle_R,
+             eye_area_L,
+             eye_area_R,
+             ax_min_L,
+             ax_maj_L,
+             ax_min_R,
+             ax_maj_R
+             ) = d.main(
                  self.TIMEBAR_YPOS_THRESH,
                  self.brt_bounds_eye,
                  self.len_bounds_eye,
@@ -338,10 +359,24 @@ class Processing(Screen):
                 print(f"body_angle: {body_angle}")
                 print(f"eye_angle_L: {eye_angle_L}")
                 print(f"eye_angle_R: {eye_angle_R}")
+                print(f"eye_area_L: {eye_area_L}")
+                print(f"eye_area_R: {eye_area_R}")
+                print(f"eye_axis_min_L: {ax_min_L}")
+                print(f"eye_axis_maj_L: {ax_maj_L}")
+                print(f"eye_axis_min_R: {ax_min_R}")
+                print(f"eye_axis_maj_R: {ax_maj_R}")
             self.load_images()
 
-    def save_result(self, out_bDetected, out_frame_no,
-                    out_angle_L, out_angle_R, out_angle_B):
+    def normalize_area(self, area):
+        mean_area = mean(area)
+        return (area - mean_area) / mean_area
+
+    def save_result(
+        self, out_bDetected, out_frame_no,
+        out_angle_B,out_angle_L, out_angle_R,
+        out_area_L, out_area_R,
+        out_ax_min_L, out_ax_maj_L,
+        out_ax_min_R, out_ax_maj_R):
         out_time = out_frame_no/self.fps
         out_angle_wrtB_L = out_angle_L - out_angle_B
         out_angle_wrtB_R = out_angle_R - out_angle_B
@@ -351,15 +386,27 @@ class Processing(Screen):
         out_angVel_R = self.get_angVel(out_angle_R, 1/self.fps)
         out_angVel_wrtB_L = self.get_angVel(out_angle_wrtB_L, 1/self.fps)
         out_angVel_wrtB_R = self.get_angVel(out_angle_wrtB_R, 1/self.fps)
+        out_area_norm_L = self.normalize_area(out_area_L)
+        out_area_norm_R = self.normalize_area(out_area_R)
+        out_axes_ratio_L = out_ax_maj_L/out_ax_min_L
+        out_axes_ratio_R = out_ax_maj_R/out_ax_min_R
+
         detection_log = vstack(
             (out_frame_no, out_time, out_bDetected, out_angle_B,
              out_angle_L, out_angle_wrtB_L,
              out_angVel_L, out_angVel_wrtB_L,
              out_angle_R, out_angle_wrtB_R,
-             out_angVel_R, out_angVel_wrtB_R)).T
+             out_angVel_R, out_angVel_wrtB_R,
+             out_area_L, out_area_R,
+             out_area_norm_L, out_area_norm_R,
+             out_ax_min_L, out_ax_maj_L, out_axes_ratio_L,
+             out_ax_min_R, out_ax_maj_R, out_axes_ratio_R)).T
         header = "frame_no,time,bDetected,angle_B," + \
             "angle_L,angle_wrtB_L,angVel_L,angVel_wrtB_L," + \
-            "angle_R,angle_wrtB_R,angVel_R,angVel_wrtB_R"
+            "angle_R,angle_wrtB_R,angVel_R,angVel_wrtB_R," + \
+            "area_L,area_R,area_norm_L,area_norm_R," + \
+            "ax_min_L,ax_maj_L,ax_ratio_L," + \
+            "ax_min_R,ax_maj_R,ax_ratio_R"
         savetxt(join(self.save_path, "result.csv"),
                 detection_log, delimiter=',',
                 header=header)
@@ -389,7 +436,9 @@ class Plotting(Screen):
         "x": "time",
         "y": "angle"}
     custom_label = ["", ""]
+    custom_eye_label = ["Left", "Right"]
     custom_grid = [None, None]
+    custom_colors = ["blue", "green"]
     graph_title = ""
     wrt_B = True
     x_range = [0, 0]
@@ -407,9 +456,14 @@ class Plotting(Screen):
     c_angVel_R = None
     c_angVel_wrtB_R = None
 
+    def set_custom_colors(self):
+        self.custom_colors[0] = self.ids.graph_color_left.text
+        self.custom_colors[1] = self.ids.graph_color_right.text
+        print("Update - custom colors: ", self.custom_colors)
+
     def set_graph_title(self):
         self.graph_title = self.ids.graph_title.text
-        print(self.graph_title)
+        print("Update - graph title: ", self.graph_title)
 
     def fetch_x(self):
         if self.axes_selection["x"] == "frame":
@@ -419,9 +473,11 @@ class Plotting(Screen):
             x = self.c_time
             xlabel = "time [sec]"
         elif self.axes_selection["x"] == "freq":
-            pass
+            x = None
+            xlabel = "Frequency [Hz]"
         else:
             print("ERROR: No x-axis option selected.")
+        print(f"{xlabel} fetched for x-axis")
         return x, xlabel
 
     def fetch_y(self):
@@ -429,6 +485,14 @@ class Plotting(Screen):
         y_labels = []
         y_selected = self.axes_selection["y"]
         if "left" in self.eye_selection:
+            if y_selected == "area":
+                y_list.append(self.c_area_norm_L)
+                y_labels.append("Normalized area")
+                pass
+            if y_selected == "axRatio":
+                y_list.append(self.c_ax_ratio_L)
+                y_labels.append("Axes ratio (major/minor)")
+                pass
             if self.wrt_B == True:
                 if y_selected == "angle":
                     y_list.append(self.c_angle_wrtB_L)
@@ -436,10 +500,8 @@ class Plotting(Screen):
                 elif y_selected == "angVel":
                     y_list.append(self.c_angVel_wrtB_L)
                     y_labels.append("angular velocity [degree/sec]")
-                elif y_selected == "fft":
-                    pass
                 else:
-                    print("ERROR: No y-axis option selected.")
+                    pass
             else:
                 if y_selected == "angle":
                     y_labels.append("angle [degree]")
@@ -447,11 +509,15 @@ class Plotting(Screen):
                 elif y_selected == "angVel":
                     y_list.append(self.c_angVel_L)
                     y_labels.append("angular velocity [degree/sec]")
-                elif y_selected == "fft":
-                    pass
                 else:
-                    print("ERROR: No y-axis option selected.")
+                    pass
         if "right" in self.eye_selection:
+            if y_selected == "area":
+                y_list.append(self.c_area_norm_R)
+                y_labels.append("Normalized area")
+            if y_selected == "axRatio":
+                y_list.append(self.c_ax_ratio_R)
+                y_labels.append("Axes ratio (major:minor)")
             if self.wrt_B == True:
                 if y_selected == "angle":
                     y_list.append(self.c_angle_wrtB_R)
@@ -459,10 +525,8 @@ class Plotting(Screen):
                 elif y_selected == "angVel":
                     y_list.append(self.c_angVel_wrtB_R)
                     y_labels.append("angular velocity [degree/sec]")
-                elif y_selected == "fft":
-                    pass
                 else:
-                    print("ERROR: No y-axis option selected.")
+                    pass
             else:
                 if y_selected == "angle":
                     y_list.append(self.c_angle_R)
@@ -470,13 +534,13 @@ class Plotting(Screen):
                 elif y_selected == "angVel":
                     y_list.append(self.c_angVel_R)
                     y_labels.append("angular velocity [degree/sec]")
-                elif y_selected == "fft":
-                    pass
                 else:
-                    print("ERROR: No y-axis option selected.")
+                    pass
         # two identical labels are appended during 
         # the if/else statements above
         y_label = y_labels[0]
+        print(f"{y_label} fetched for y-axis")
+
         return y_list, y_label
 
     def get_first_available(self, y_part, bDetected_part):
@@ -526,9 +590,18 @@ class Plotting(Screen):
             x, xlabel = self.fetch_x()
             y, y_label = self.fetch_y()
 
-            for i, y_arr in enumerate(y):
+            for y_arr in y:
                 self.interpolate(y_arr)
 
+            if self.axes_selection["x"] == "freq":
+                for i, y_arr in enumerate(y):
+                    print(shape(y_arr))
+                    y[i] = abs(rfft(y_arr / len(y_arr)))
+                nSamples = int(max(self.c_frame_no))
+                sample_interval = self.c_time[1]
+                x = rfftfreq(nSamples, sample_interval)
+                y_label += " - Amplitude"
+            
             now = datetime.now()
             date_time = now.strftime("%Y_%m_%d-%H_%M_%S.png")
             output = join(
@@ -536,24 +609,27 @@ class Plotting(Screen):
             pt.main(output,
                     x, xlabel, self.x_range,
                     y, y_label, self.y_range,
+                    self.eye_selection,
                     self.custom_grid,
                     self.custom_label,
+                    self.custom_eye_label,
+                    self.custom_colors,
                     self.graph_title,
-                    self.c_bDetected)
+                    self.c_bDetected,)
             self.graph_file = output
         except:
             print("ERROR: invalid configuration(s).")
 
     def update_wrtB(self, instance, value):
         self.wrt_B = value
-        print(self.wrt_B)
+        print("Update - with respect to body: ", self.wrt_B)
 
     def update_eye_selection(self, instance, value, LR):
         if value == True:
             self.eye_selection.append(LR)
         else:
             self.eye_selection.remove(LR)
-        print(self.eye_selection)
+        print("Update - eye selection: ", self.eye_selection)
 
     def set_x_range(self, idx):
         try:
@@ -565,7 +641,7 @@ class Plotting(Screen):
                 pass
         except:
             print("ERROR: Invalid input for x-axis range.")
-        print(self.x_range)
+        print("Update - x_range: ", self.x_range)
 
     def clear_x_range(self, instance, value):
         try:
@@ -576,7 +652,7 @@ class Plotting(Screen):
                 self.x_range[1] = int(self.ids.x_range_to.text)
         except:
             print("ERROR: Invalid input for x-axis range.")
-        print(self.x_range)
+        print("Update - x_range: ", self.x_range)
 
     def set_y_range(self, idx):
         try:
@@ -588,7 +664,7 @@ class Plotting(Screen):
                 pass
         except:
             print("ERROR: Invalid input for y-axis range.")
-        print(self.y_range)
+        print("Update - y_range: ", self.y_range)
 
     def clear_y_range(self, instance, value):
         try:
@@ -599,7 +675,7 @@ class Plotting(Screen):
                 self.y_range[1] = int(self.ids.y_range_to.text)
         except:
             print("ERROR: Invalid input for x-axis range.")
-        print(self.y_range)
+        print("Update - y_range: ", self.y_range)
 
     def set_grid(self, ax):
         if ax == "x":
@@ -620,7 +696,7 @@ class Plotting(Screen):
                 self.custom_grid[1] = None
         else:
             pass
-        print(self.custom_grid)
+        print("Update - custom grid: ", self.custom_grid)
 
     def clear_grid(self, instance, value, ax):
         try:
@@ -640,7 +716,7 @@ class Plotting(Screen):
                     pass
         except:
             pass
-        print(self.custom_grid)
+        print("Update - custom grid: ", self.custom_grid)
 
     def set_custom_label(self, ax):
         if ax == "x":
@@ -649,7 +725,17 @@ class Plotting(Screen):
             self.custom_label[1] = self.ids.custom_ylabel.text
         else:
             pass
-        print(self.custom_label)
+        print("Update - custom axes label: ", self.custom_label)
+
+    def set_custom_eye_label(self, lr):
+        if lr == "left":
+            self.custom_eye_label[0] = self.ids.graph_label_left.text
+        elif lr == "right":
+            self.custom_eye_label[1] = self.ids.graph_label_right.text
+        else:
+            pass
+        print("Update - custom eyes label: ", self.custom_eye_label)
+
 
     def clear_custom_label(self, instance, value, ax):
         if value == True:
@@ -666,7 +752,7 @@ class Plotting(Screen):
                 self.custom_label[1] = self.ids.custom_ylabel.text
             else:
                 pass
-        print(self.custom_label)
+        print("Update - custom label: ", self.custom_label)
 
     def update_axes_selection(self, instance, value, axis, choice):
         if value == True:
@@ -678,31 +764,24 @@ class Plotting(Screen):
             if choice == "freq":
                 self.reset_y_ax_choice()
 
-        if self.axes_selection["x"] == "freq":
-            self.ids.y_ax_angle.disabled = True
-            self.ids.y_ax_angVel.disabled = True
-            self.axes_selection["y"] = "fft"
-            
-        else:
-            self.ids.y_ax_angle.disabled = False
-            self.ids.y_ax_angVel.disabled = False
-
         if self.axes_selection["y"] == "angVel":
+            self.ids.x_ax_frame.active = False
             self.ids.x_ax_frame.disabled = True
-            self.ids.x_ax_freq.disabled = True
-            self.ids.x_ax_time.active = True
-            self.axes_selection["x"] = "time"
         else:
             self.ids.x_ax_frame.disabled = False
-            self.ids.x_ax_freq.disabled = False
 
-        print(self.axes_selection)
+        print("Update - axes selection: ",
+              self.axes_selection)
 
     def reset_y_ax_choice(self):
         if self.ids.y_ax_angle.active == True:
             self.axes_selection["y"] = "angle"
         elif self.ids.y_ax_angVel.active == True:
             self.axes_selection["y"] = "angVel"
+        elif self.ids.y_ax_area.active == True:
+            self.axes_selection["y"] = "area"
+        elif self.ids.y_ax_axRatio.active == True:
+            self.axes_selection["y"] = "axRatio"
         else:
             self.axes_selection["y"] = ""
 
@@ -743,8 +822,19 @@ class Plotting(Screen):
             self.c_angle_wrtB_R = data_frame[:, 9]
             self.c_angVel_R = data_frame[:, 10]
             self.c_angVel_wrtB_R = data_frame[:, 11]
+            self.c_area_L = data_frame[:, 12]
+            self.c_area_R = data_frame[:, 13]
+            self.c_area_norm_L = data_frame[:, 14]
+            self.c_area_norm_R = data_frame[:, 15]
+            self.c_ax_min_L = data_frame[:, 16]
+            self.c_ax_maj_L = data_frame[:, 17]
+            self.c_ax_ratio_L = data_frame[:, 18]
+            self.c_ax_min_R = data_frame[:, 19]
+            self.c_ax_maj_R = data_frame[:, 20]
+            self.c_ax_ratio_R = data_frame[:, 21]
+
         except:
-            print("ERROR: Process result sheet not available.")
+            print("ERROR: Processing result data not available.")
 
 Builder.load_file('zebrafish.kv')
 Builder.load_file('processing.kv')
@@ -756,7 +846,7 @@ class ZebrafishApp(App):
         return wm_kv
 
 if __name__ == '__main__':
-    Window.size = (1500, 900)
-    Window.top = 100
+    Window.size = (1200, 900)
+    Window.top = 50
     Window.left = 100
     ZebrafishApp().run()

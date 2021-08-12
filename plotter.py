@@ -15,28 +15,40 @@ def generate_blank(pathname):
 
 def main(output, x, x_label, x_range,
          y_list, y_label, y_range,
-         custom_grid, custom_label,
+         lr_selected,
+         custom_grid,
+         custom_label,
+         custom_eye_label,
+         custom_colors,
          graph_title, bDetected):
     _, ax = plt.subplots()
+
     if len(y_list) == 2:
-        labels = ["Left", "Right"]
-        colors = ["r", "g"]
         for i, y_arr in enumerate(y_list):
             ax.plot(x, y_arr,
-                    color=colors[i],
-                    label=labels[i],
-                    linewidth=0.5)
-            ax.legend()
+                    color=custom_colors[i],
+                    label=custom_eye_label[i],
+                    linewidth=1)
+            ax.legend(loc="upper right")
     elif len(y_list) == 1:
-        ax.plot(x, y_list[0], 'black', linewidth=1)
+        if lr_selected[0] == "left":
+            my_color = custom_colors[0]
+        if lr_selected[0] == "right":
+            my_color = custom_colors[1]
+        ax.plot(x, y_list[0], my_color, linewidth=1)
+    else:
+        print("ERROR: Wrong input for y.")
+        pass
 
     if x_range == [0, 0]:
+        # pass
         ax.set_xlim(xmin=0, xmax=max(x))
     else:
         ax.set_xlim(xmin=x_range[0], xmax=x_range[1])
 
     if y_range == [0, 0]:
-        ax.set_ylim(ymin=min(y_list)-10, ymax=max(y_list)+10)
+        # pass
+        ax.set_ylim(ymin=min(y_list), ymax=max(y_list))
     else:
         ax.set_ylim(ymin=y_range[0], ymax=y_range[1])
 
