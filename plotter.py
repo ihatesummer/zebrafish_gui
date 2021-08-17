@@ -20,34 +20,44 @@ def main(output, x, x_label, x_range,
          custom_label,
          custom_eye_label,
          custom_colors,
-         graph_title, bDetected):
+         graph_title, xAxis):
     _, ax = plt.subplots()
 
     if len(y_list) == 2:
-        for i, y_arr in enumerate(y_list):
-            ax.plot(x, y_arr,
-                    color=custom_colors[i],
-                    label=custom_eye_label[i],
-                    linewidth=1)
-            ax.legend(loc="upper right")
+        if xAxis == "freq":
+            for i, y_arr in enumerate(y_list):
+                ax.semilogy(x, y_arr,
+                        color=custom_colors[i],
+                        label=custom_eye_label[i],
+                        linewidth=1)
+                ax.legend(loc="upper right")
+        else:
+            for i, y_arr in enumerate(y_list):
+                ax.plot(x, y_arr,
+                        color=custom_colors[i],
+                        label=custom_eye_label[i],
+                        linewidth=1)
+                ax.legend(loc="upper right")
     elif len(y_list) == 1:
         if lr_selected[0] == "left":
             my_color = custom_colors[0]
         if lr_selected[0] == "right":
             my_color = custom_colors[1]
-        ax.plot(x, y_list[0], my_color, linewidth=1)
+        if xAxis == "freq":
+            ax.semilogy(x, y_list[0], my_color, linewidth=1)
+        else:
+            ax.plot(x, y_list[0], my_color, linewidth=1)
+
     else:
         print("ERROR: Wrong input for y.")
         pass
 
     if x_range == [0, 0]:
-        # pass
-        ax.set_xlim(xmin=0, xmax=max(x))
+        ax.set_xlim(xmin=min(x), xmax=max(x))
     else:
         ax.set_xlim(xmin=x_range[0], xmax=x_range[1])
 
     if y_range == [0, 0]:
-        # pass
         ax.set_ylim(ymin=min(y_list), ymax=max(y_list))
     else:
         ax.set_ylim(ymin=y_range[0], ymax=y_range[1])

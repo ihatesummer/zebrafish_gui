@@ -487,11 +487,11 @@ class Plotting(Screen):
         if "left" in self.eye_selection:
             if y_selected == "area":
                 y_list.append(self.c_area_norm_L)
-                y_labels.append("Normalized area")
+                y_labels.append("Normalized area [0-1]")
                 pass
             if y_selected == "axRatio":
                 y_list.append(self.c_ax_ratio_L)
-                y_labels.append("Axes ratio (major/minor)")
+                y_labels.append("Axes ratio [major:minor]")
                 pass
             if self.wrt_B == True:
                 if y_selected == "angle":
@@ -514,10 +514,10 @@ class Plotting(Screen):
         if "right" in self.eye_selection:
             if y_selected == "area":
                 y_list.append(self.c_area_norm_R)
-                y_labels.append("Normalized area")
+                y_labels.append("Normalized area [0-1]")
             if y_selected == "axRatio":
                 y_list.append(self.c_ax_ratio_R)
-                y_labels.append("Axes ratio (major:minor)")
+                y_labels.append("Axes ratio [major:minor]")
             if self.wrt_B == True:
                 if y_selected == "angle":
                     y_list.append(self.c_angle_wrtB_R)
@@ -595,12 +595,12 @@ class Plotting(Screen):
 
             if self.axes_selection["x"] == "freq":
                 for i, y_arr in enumerate(y):
-                    print(shape(y_arr))
-                    y[i] = abs(rfft(y_arr / len(y_arr)))
+                    y[i] = abs(rfft(y_arr))
                 nSamples = int(max(self.c_frame_no))
                 sample_interval = self.c_time[1]
                 x = rfftfreq(nSamples, sample_interval)
-                y_label += " - Amplitude"
+                idx_y_unit = y_label.index("[") - 1
+                y_label = y_label[:idx_y_unit] + " - Amplitude"
             
             now = datetime.now()
             date_time = now.strftime("%Y_%m_%d-%H_%M_%S.png")
@@ -615,7 +615,7 @@ class Plotting(Screen):
                     self.custom_eye_label,
                     self.custom_colors,
                     self.graph_title,
-                    self.c_bDetected,)
+                    self.axes_selection["x"])
             self.graph_file = output
         except:
             print("ERROR: invalid configuration(s).")
