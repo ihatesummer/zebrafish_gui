@@ -16,6 +16,17 @@ def createFolder(dir: str) -> None:
         print('Error: Creating directory ' + dir + ' failed. [OSError]')
 
 
+def get_nFrames(VID_PATH: str, vid: str) -> int:
+    """
+    Get the total number of frames of a given video file
+    :param VID_PATH: folder containing the video file
+    :param vid: name of the video file
+    """
+    vc = VideoCapture(join(VID_PATH, vid))
+    nFrames = int(vc.get(CAP_PROP_FRAME_COUNT)) - 1
+    return nFrames
+
+
 def main(vid: str, IMAGE_PATH: str, VIDEO_PATH: str) -> None:
     """
     Extract frames from a video using openCV.
@@ -45,11 +56,6 @@ def main(vid: str, IMAGE_PATH: str, VIDEO_PATH: str) -> None:
         if waitKey(1000) != -1:
             break
 
-
-def get_nFrames(VID_PATH, vid):
-    vc = VideoCapture(join(VID_PATH, vid))
-    nFrames = int(vc.get(CAP_PROP_FRAME_COUNT)) - 1
-    return nFrames
 
 if __name__ == "__main__":
     print("WARNING: this is not the main module.")

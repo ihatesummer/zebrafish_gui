@@ -28,24 +28,29 @@
         BoxLayout:
             orientation: "horizontal"
             size_hint_y: None
-            height: 110
+            height: 150
+            canvas.before:
+                Color:
+                    rgb: 1, 1, 1
+                Line:
+                    width: 2
+                    rectangle: self.x, self.y, self.width, self.height
             FileChooserListView:
                 id: filechooser
                 rootpath: "./videos"
-                padding: 20
                 on_selection: root.set_vid_name()
             Button:
-                text: "Extract frames"
+                text: "Refresh"
+                background_color: (1, 1, 1, 1)
                 size_hint: None, 1
-                width: root.width/4
-                background_color: (1,1,1,1)
+                width: root.width/4 * 0.3
+                on_press: root.refresh_filechooser()
+            Button:
+                text: "Extract frames"
+                background_color: (1, 1, 1, 1)
+                size_hint: None, 1
+                width: root.width/4 * 0.7
                 on_press: root.frame_extraction()
-        Label:
-            text: ""
-            id: progress_frame_extractor
-            size_hint: None, None
-            width: self.parent.width-10
-            height: 10
         BoxLayout:
             orientation: "horizontal"
             size_hint_y: None
@@ -138,29 +143,29 @@
                     cols: 1
                     size_hint: None, None
                     width: self.parent.width
-                    height: self.parent.height*10/16
+                    height: self.parent.height*7/13
                     spacing: 1
 
                     Label:
                         text: "Detection Properties"
                         size_hint_y: None
-                        height: 20
+                        height: 30
                         background_color: (0.1, 0.5, 0.1, 1)
                         bold: True
                     BoxLayout:
                         orientation: "horizontal"
                         size_hint_y: None
-                        height: 20
+                        height: 30
                         spacing: 1
                         Label:
                             text: "Target"
                             size_hint: 0.2, None
-                            height: 20
+                            height: 30
                             background_color: (0.1, 0.5, 0.1, 1)
                         Label:
                             text: "Thresholds"
                             size_hint: 0.8, None
-                            height: 20
+                            height: 30
                             background_color: (0.1, 0.5, 0.1, 1)
                     BoxLayout:
                         orientation: "horizontal"
@@ -171,123 +176,144 @@
                             spacing: 1
                             Label:
                                 text: "Eyes"
-                                size_hint_y: 0.4
+                                size_hint_y: 2/7
                             Label:
-                                text: "Baldder"
-                                size_hint_y: 0.4
+                                text: "Bladder"
+                                size_hint_y: 2/7
                             Label:
                                 text: "General"
-                                size_hint_y: 0.2
-                        GridLayout:
-                            cols: 2
+                                size_hint_y: 3/7
+                        BoxLayout:
+                            orientation: "vertical"
                             size_hint_x: 0.8
-                            Label:
-                                text: "Brightness_low: "
-                            TextInput:
-                                id: ble
-                                multiline: False
-                                size_hint_x: None
-                                size_x: 0.1
-                                on_text: root.set_properties("ble")
-                            Label:
-                                text: "Brightness_high: "
-                            TextInput:
-                                id: bhe
-                                multiline: False
-                                size_hint_x: None
-                                size_x: 0.1
-                                on_text: root.set_properties("bhe")
-                            Label:
-                                text: "ContourLength_low: "
-                            TextInput:
-                                id: cle
-                                multiline: False
-                                size_hint_x: None
-                                size_x: 0.1
-                                on_text: root.set_properties("cle")
-                            Label:
-                                text: "ContourLength_high: "
-                            TextInput:
-                                id: che
-                                multiline: False
-                                size_hint_x: None
-                                size_x: 0.1
-                                on_text: root.set_properties("che")
-                            Label:
-                                text: "Brightness_low: "
-                            TextInput:
-                                id: blb
-                                multiline: False
-                                size_hint_x: None
-                                size_x: 0.1
-                                on_text: root.set_properties("blb")
-                            Label:
-                                text: "Brightness_high: "
-                            TextInput:
-                                id: bhb
-                                multiline: False
-                                size_hint_x: None
-                                size_x: 0.1
-                                on_text: root.set_properties("bhb")
-                            Label:
-                                text: "ContourLength_low: "
-                            TextInput:
-                                id: clb
-                                multiline: False
-                                size_hint_x: None
-                                size_x: 0.1
-                                on_text: root.set_properties("clb")
-                            Label:
-                                text: "ContourLength_high: "
-                            TextInput:
-                                id: chb
-                                multiline: False
-                                size_hint_x: None
-                                size_x: 0.1
-                                on_text: root.set_properties("chb")
-                            Label:
-                                text: "Hu_distance [0~1]: "
-                            TextInput:
-                                id: hd
-                                multiline: False
-                                size_hint_x: None
-                                size_x: 0.1
-                                on_text: root.set_properties("hd")
-                            Label:
-                                text: "TimeBar_pos_y: "
-                            TextInput:
-                                id: tpy
-                                multiline: False
-                                size_hint_x: None
-                                size_x: 0.1
-                                on_text: root.set_properties("tpy")
+                            BoxLayout:
+                                orientation: "horizontal"
+                                Label:
+                                    text: "Brightness [0-255]:"
+                                    size_hint_x: 0.7
+                                TextInput:
+                                    id: ble
+                                    multiline: False
+                                    size_hint_x: 0.15
+                                    on_text: root.set_properties("ble")
+                                TextInput:
+                                    id: bhe
+                                    multiline: False
+                                    size_hint_x: 0.15
+                                    size_hint_x: 0.15
+                                    on_text: root.set_properties("bhe")
+                            BoxLayout:
+                                orientation: "horizontal"
+                                Label:
+                                    text: "Contour Length:"
+                                    size_hint_x: 0.7
+                                TextInput:
+                                    id: cle
+                                    multiline: False
+                                    size_hint_x: 0.15
+                                    on_text: root.set_properties("cle")
+                                TextInput:
+                                    id: che
+                                    multiline: False
+                                    size_hint_x: 0.15
+                                    on_text: root.set_properties("che")
+                            BoxLayout:
+                                orientation: "horizontal"
+                                Label:
+                                    text: "Brightness [0-255]:"
+                                    size_hint_x: 0.7
+                                TextInput:
+                                    id: blb
+                                    multiline: False
+                                    size_hint_x: 0.15
+                                    on_text: root.set_properties("blb")
+                                TextInput:
+                                    id: bhb
+                                    multiline: False
+                                    size_hint_x: 0.15
+                                    on_text: root.set_properties("bhb")
+                            BoxLayout:
+                                orientation: "horizontal"
+                                Label:
+                                    text: "Contour Length:"
+                                    size_hint_x: 0.7
+                                TextInput:
+                                    id: clb
+                                    multiline: False
+                                    size_hint_x: 0.15
+                                    on_text: root.set_properties("clb")
+                                TextInput:
+                                    id: chb
+                                    multiline: False
+                                    size_hint_x: 0.15
+                                    on_text: root.set_properties("chb")
+                            BoxLayout:
+                                orientation: "horizontal"
+                                Label:
+                                    text: "Hu distance [0-1]:"
+                                    size_hint_x: 0.7
+                                TextInput:
+                                    id: hd
+                                    multiline: False
+                                    size_hint_x: 0.3
+                                    on_text: root.set_properties("hd")
+                            BoxLayout:
+                                orientation: "horizontal"
+                                Label:
+                                    text: "Crop (width) [0-1]: "
+                                    size_hint_x: 0.7
+                                TextInput:
+                                    id: crp_x_l
+                                    multiline: False
+                                    size_hint_x: 0.15
+                                    on_text: root.set_properties("crp_x_l")
+                                TextInput:
+                                    id: crp_x_h
+                                    multiline: False
+                                    size_hint_x: 0.15
+                                    on_text: root.set_properties("crp_x_h")
+                            BoxLayout:
+                                orientation: "horizontal"
+                                Label:
+                                    text: "Crop (height) [0-1]: "
+                                    size_hint_x: 0.7
+                                TextInput:
+                                    id: crp_y_l
+                                    multiline: False
+                                    size_hint_x: 0.15
+                                    on_text: root.set_properties("crp_y_l")
+                                TextInput:
+                                    id: crp_y_h
+                                    multiline: False
+                                    size_hint_x: 0.15
+                                    on_text: root.set_properties("crp_y_h")
                             
                 GridLayout:
                     cols: 1
                     size_hint: None, None
                     width: self.parent.width
-                    height: self.parent.height*6/16
+                    height: self.parent.height*6/13
                     spacing: 1
                     Label:
                         text: "Inscription Offsets"
                         size_hint_y: None
-                        height: 20
+                        height: 30
                         background_color: (0.1, 0.1, 0.5, 1)
                         bold: True
                     BoxLayout:
                         orientation: "horizontal"
                         size_hint_y: None
-                        height: 20
+                        height: 30
                         spacing: 1
                         Label:
                             text: "Target"
                             size_hint: 0.2, None
-                            height: 20
+                            height: 30
                             background_color: (0.1, 0.1, 0.5, 1)
                         Label:
                             text: "Offset"
                             size_hint: 0.8, None
-                            height: 20
+                            height: 30
                             background_color: (0.1, 0.1, 0.5, 1)
                     BoxLayout:
                         orientation: "horizontal"

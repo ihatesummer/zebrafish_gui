@@ -167,7 +167,7 @@ def inscribe_text(result, text, center,
                      color, thickness, LINE_AA)
 
 
-def remove_false_bladder(bladders, eyes, TIMEBAR_YPOS_THRESH):
+def remove_false_bladder(bladders, eyes):
     """
     Removes falsely detected bladder by evaluating each
     candidate's distance to the eyes. If the distance is too short,
@@ -177,8 +177,6 @@ def remove_false_bladder(bladders, eyes, TIMEBAR_YPOS_THRESH):
     :param bladders: list of possible contours
                      that could be the bladder
     :param eyes: list of the two eyes that are already detected
-    :param TIMEBAR_YPOS_THRESH: the y-coordinate position
-                                of the timebar
     """
     eye_centers = []
     for eye in eyes:
@@ -192,14 +190,6 @@ def remove_false_bladder(bladders, eyes, TIMEBAR_YPOS_THRESH):
         dist = norm(
             array(bladder_center)-array(eyes_midpoint),
             ord=2)
-        '''
-        Excluding the timebar.
-        Since the timebar is at the top-left corner,
-        the y-coordinate of the bladder's center is evaluated.
-        We assume that the bladder never goes higher than the timebar.
-        '''
-        if bladder_center[1] < TIMEBAR_YPOS_THRESH:
-            dist = 0
         bladder_to_eye_distances.append(dist)
 
     argmax_idx = argmax(bladder_to_eye_distances)
@@ -263,27 +253,23 @@ def get_angle(ref_point, measure_point):
     return angle
 
 
-def main(
-        TIMEBAR_YPOS_THRESH: int,
-        brt_bounds_eye,
-        len_bounds_eye,
-        brt_bounds_bladder,
-        len_bounds_bladder,
-        Hu_dist_thresh,
-        inscription_pos_offset_eyeL,
-        inscription_pos_offset_eyeR,
-        inscription_pos_offset_bladder,
-        img_input,
-        img_output,
-        bDebug,
-        crop_ratio=-1):
+def main(crop_ratio,
+         brt_bounds_eye,
+         len_bounds_eye,
+         brt_bounds_bladder,
+         len_bounds_bladder,
+         Hu_dist_thresh,
+         inscription_pos_offset_eyeL,
+         inscription_pos_offset_eyeR,
+         inscription_pos_offset_bladder,
+         img_input,
+         img_output,
+         bDebug):
     """
     Inscribes the eyes and body angles onto the pictures
     and also saves as a csv file
     :param IMG_PATH: the parent folder of the source
                      and destination image folders
-    :param TIMEBAR_YPOS_THRESH: the y-coordinate position
-                                of the timebar
     :param brt_bounds_eye: brightness bounds [low, high] of the eyes
     :param len_bounds_eye: length bounds [low, high] of the eyes
     :param brt_bounds_bladder: brightness bounds [low, high]
@@ -299,13 +285,13 @@ def main(
     """
     bDetected = True
     img = imread(img_input)
-    if crop_ratio != -1:
-        if shape(crop_ratio) == (2, 2):
-            crop_hor, crop_vert = crop_ratio
-            img = crop_image(img, crop_hor, crop_vert)
-        else:
-            print("Error: Wrong input for crop_ratio."
-                  "Refer to crop_image() function input description.")
+
+    crop_hor, crop_vert = crop_ratio
+    img = crop_image(img, crop_hor, crop_vert)
+    if bDebug:
+        imshow('Cropped image', img)
+        waitKey(0)
+        destroyAllWindows()
     
     # Eyes
     img_bin_brt = get_binary_brightness(img, brt_bounds_eye)
@@ -432,7 +418,7 @@ def main(
                 print(f"{len(filtered_cnt_blad)} bladder candidates found.",
                 "Removing false bladder(s)...")
             filtered_cnt_blad = remove_false_bladder(
-                filtered_cnt_blad, filtered_cnt_eyes, TIMEBAR_YPOS_THRESH)
+                filtered_cnt_blad, filtered_cnt_eyes)
     else:
         filtered_cnt_blad = filtered_cnt_blad[0]
     if not bDetected:
@@ -512,13 +498,13 @@ def main(
     eyeR_ax_maj = eye_ax_majs[right_eye_idx]
     inscribe_text(
         inscribed_img,
-        f'{eyeL_angle-body_angle:.2f} deg',
+        f'{-(eyeL_angle-body_angle):.2f} deg',
         eye_centers[left_eye_idx],
         inscription_pos_offset_eyeL,
         0.5, BLUE, 1)
     inscribe_text(
         inscribed_img,
-        f'{eyeR_angle-body_angle:.2f} deg',
+        f'{-(eyeR_angle-body_angle):.2f} deg',
         eye_centers[right_eye_idx],
         inscription_pos_offset_eyeR,
         0.5, BLUE, 1)

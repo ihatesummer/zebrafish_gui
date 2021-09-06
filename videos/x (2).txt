@@ -1,0 +1,1 @@
+git@github.com:ihatesummer/fish_gui.git

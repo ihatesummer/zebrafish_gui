@@ -3,6 +3,7 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.properties import ObjectProperty
 from kivy.core.window import Window
 from kivy.lang import Builder
+from kivy.config import Config
 from cv2 import imwrite, cvtColor, COLOR_RGB2BGR
 from os import getcwd, listdir
 from os.path import join, normpath, basename, exists
@@ -12,12 +13,14 @@ from numpy import (abs, vstack, savetxt, count_nonzero,
 from scipy.fft import rfft, rfftfreq
 from datetime import datetime
 from decord import VideoReader, cpu, gpu
+import threading
 import frame_extractor as vfe
 import detector as d
 import plotter as pt
 import kivy
 kivy.require('2.0.0')
 
+Config.set('kivy', 'exit_on_escape', '0')
 
 class WindowManager(ScreenManager):
     pass
@@ -43,9 +46,11 @@ class Processing(Screen):
     ins_offset_eyeL = [0, 0]
     ins_offset_eyeR = [0, 0]
     ins_offset_bladder = [0, 0]
+    crop_ratio = [[0, 1], [0, 1]]
 
     settings_names = ["fps",
-                      "TIMEBAR_YPOS_THRESH",
+                      "crop_width",
+                      "crop_height",
                       "Hu_dist_thresh",
                       "brt_bounds_eye",
                       "len_bounds_eye",
@@ -55,6 +60,9 @@ class Processing(Screen):
                       "ins_offset_eyeR",
                       "ins_offset_bladder"]
 
+    def refresh_filechooser(self):
+        self.ids.filechooser._update_files()
+        print("Filechooser refreshed.")
 
     def set_properties(self, key):
         try:
@@ -65,7 +73,11 @@ class Processing(Screen):
                         "ins_off_x_eyeL", "ins_off_y_eyeL",
                         "ins_off_x_eyeR", "ins_off_y_eyeR",
                         "ins_off_x_blad", "ins_off_y_blad",
-                        "tpy", "hd"]
+                        "hd",
+                        "crp_x_l",
+                        "crp_x_h",
+                        "crp_y_l",
+                        "crp_y_h"]
             else:
                 keys = [key]
 
@@ -99,10 +111,16 @@ class Processing(Screen):
                 self.ins_offset_bladder[0] = int(self.ids.ins_off_x_blad.text)
             if "ins_off_y_blad" in keys:
                 self.ins_offset_bladder[1] = int(self.ids.ins_off_y_blad.text)
-            if "tpy" in keys:
-                self.TIMEBAR_YPOS_THRESH = int(self.ids.tpy.text)
             if "hd" in keys:
                 self.Hu_dist_thresh = float(self.ids.hd.text)
+            if "crp_x_l" in keys:
+                self.crop_ratio[0][0] = float(self.ids.crp_x_l.text)
+            if "crp_x_h" in keys:
+                self.crop_ratio[0][1] = float(self.ids.crp_x_h.text)
+            if "crp_y_l" in keys:
+                self.crop_ratio[1][0] = float(self.ids.crp_y_l.text)
+            if "crp_y_h" in keys:
+                self.crop_ratio[1][1] = float(self.ids.crp_y_h.text)
         except:
             pass
 
@@ -122,8 +140,11 @@ class Processing(Screen):
         self.ids.ins_off_y_eyeR.text = str(self.ins_offset_eyeR[1])
         self.ids.ins_off_x_blad.text = str(self.ins_offset_bladder[0])
         self.ids.ins_off_y_blad.text = str(self.ins_offset_bladder[1])
-        self.ids.tpy.text = str(self.TIMEBAR_YPOS_THRESH)
         self.ids.hd.text = str(self.Hu_dist_thresh)
+        self.ids.crp_x_l.text = str(self.crop_ratio[0][0])
+        self.ids.crp_x_h.text = str(self.crop_ratio[0][1])
+        self.ids.crp_y_l.text = str(self.crop_ratio[1][0])
+        self.ids.crp_y_h.text = str(self.crop_ratio[1][1])
 
     def frame_extraction(self):
         try:
@@ -156,8 +177,6 @@ class Processing(Screen):
         self.frame_no = 0
         self.nFrames = vfe.get_nFrames('videos',
                                        self.vid_name)
-        self.ids.progress_frame_extractor.value = 0
-        self.ids.progress_frame_extractor.max = self.nFrames - 1
         self.ids.frame_slider.max = self.nFrames - 1
         self.load_images()
         self.ids.vid_selected.text = 'Selected: "' + \
@@ -166,6 +185,7 @@ class Processing(Screen):
         self.save_path = join(
             getcwd(), "results", self.vid_name)
         self.load_settings()
+        print(f"Video {self.vid_name} selected.")
 
     def dec_frame(self):
         self.frame_no -= 1
@@ -206,7 +226,8 @@ class Processing(Screen):
         try:
             dict = {}
             settings = [self.fps,
-                        self.TIMEBAR_YPOS_THRESH,
+                        self.crop_ratio[0],
+                        self.crop_ratio[1],
                         self.Hu_dist_thresh,
                         self.brt_bounds_eye,
                         self.len_bounds_eye,
@@ -226,87 +247,97 @@ class Processing(Screen):
             pass
 
     def load_settings(self):
-        try:
-            file = join(self.save_path, "settings.json")
-            with open(file) as load_settings:
-                loaded = load(load_settings)
-                self.fps = loaded['fps']
-                self.TIMEBAR_YPOS_THRESH = loaded['TIMEBAR_YPOS_THRESH']
-                self.Hu_dist_thresh = loaded['Hu_dist_thresh']
-                self.brt_bounds_eye = loaded['brt_bounds_eye']
-                self.len_bounds_eye = loaded['len_bounds_eye']
-                self.brt_bounds_bladder = loaded['brt_bounds_bladder']
-                self.len_bounds_bladder = loaded['len_bounds_bladder']
-                self.ins_offset_eyeL = loaded['ins_offset_eyeL']
-                self.ins_offset_eyeR = loaded['ins_offset_eyeR']
-                self.ins_offset_bladder = loaded['ins_offset_bladder']        
-            self.upload_properties_to_gui()
-
-        except:
-            self.fps = ""
-            self.TIMEBAR_YPOS_THRESH = ""
-            self.Hu_dist_thresh = ""
-            self.brt_bounds_eye = ["", ""]
-            self.len_bounds_eye = ["", ""]
-            self.brt_bounds_bladder = ["", ""]
-            self.len_bounds_bladder = ["", ""]
-            self.ins_offset_eyeL = ["", ""]
-            self.ins_offset_eyeR = ["", ""]
-            self.ins_offset_bladder = ["", ""]
-            self.upload_properties_to_gui()
+        specific_setting = join(self.save_path, "settings.json")
+        if exists(specific_setting):
+            file = specific_setting
+            print(f"Specific settings loaded.")
+        else:
+            file = "default_settings.json"
+            print(f"Default settings loaded.")
+        with open(file) as load_settings:
+            loaded = load(load_settings)
+            self.fps = loaded['fps']
+            self.Hu_dist_thresh = loaded['Hu_dist_thresh']
+            self.crop_ratio[0] = loaded['crop_width']
+            self.crop_ratio[1] = loaded['crop_height']
+            self.brt_bounds_eye = loaded['brt_bounds_eye']
+            self.len_bounds_eye = loaded['len_bounds_eye']
+            self.brt_bounds_bladder = loaded['brt_bounds_bladder']
+            self.len_bounds_bladder = loaded['len_bounds_bladder']
+            self.ins_offset_eyeL = loaded['ins_offset_eyeL']
+            self.ins_offset_eyeR = loaded['ins_offset_eyeR']
+            self.ins_offset_bladder = loaded['ins_offset_bladder']        
+        self.upload_properties_to_gui()
 
     def detection(self, frame):
         if frame == "all":
             bDebug = False
             file_list = []
-            for file_name in listdir(self.img_path):
-                if file_name[0].isdigit():
-                    file_list.append(file_name)
-
+            try:
+                for file_name in listdir(self.img_path):
+                    if file_name[0].isdigit():
+                        file_list.append(file_name)
+            except:
+                return None
             if len(file_list) != self.nFrames:
                 print("WARNING: Not all frames from the",
                       "selected video are extracted.",
                       "Please extract the frames first.")
             (out_bDetected,
-             out_frame_no,
-             out_angle_B,
-             out_angle_L,
-             out_angle_R,
-             out_area_L,
-             out_area_R,
-             out_ax_min_L,
-             out_ax_maj_L,
-             out_ax_min_R,
-             out_ax_maj_R) = d.alloc_result_space(
-                 self.nFrames)
+            out_frame_no,
+            out_angle_B,
+            out_angle_L,
+            out_angle_R,
+            out_area_L,
+            out_area_R,
+            out_ax_min_L,
+            out_ax_maj_L,
+            out_ax_min_R,
+            out_ax_maj_R) = d.alloc_result_space(
+                self.nFrames)
             for i, file in enumerate(file_list):
                 out_frame_no[i] = d.get_frame_no(file)
                 img_input = join(self.img_path,
                                  file)
                 img_output = join(self.img_path,
                                   "processed_"+file)
-                (out_bDetected[i],
-                 out_angle_B[i],
-                 out_angle_L[i],
-                 out_angle_R[i],
-                 out_area_L[i],
-                 out_area_R[i],
-                 out_ax_min_L[i],
-                 out_ax_maj_L[i],
-                 out_ax_min_R[i],
-                 out_ax_maj_R[i]) = d.main(
-                    self.TIMEBAR_YPOS_THRESH,
-                    self.brt_bounds_eye,
-                    self.len_bounds_eye,
-                    self.brt_bounds_bladder,
-                    self.len_bounds_bladder,
-                    self.Hu_dist_thresh,
-                    self.ins_offset_eyeL,
-                    self.ins_offset_eyeR,
-                    self.ins_offset_bladder,
-                    img_input,
-                    img_output,
-                    bDebug)
+                try:
+                    (out_bDetected[i],
+                    out_angle_B[i],
+                    out_angle_L[i],
+                    out_angle_R[i],
+                    out_area_L[i],
+                    out_area_R[i],
+                    out_ax_min_L[i],
+                    out_ax_maj_L[i],
+                    out_ax_min_R[i],
+                    out_ax_maj_R[i]) = d.main(
+                        self.crop_ratio,
+                        self.brt_bounds_eye,
+                        self.len_bounds_eye,
+                        self.brt_bounds_bladder,
+                        self.len_bounds_bladder,
+                        self.Hu_dist_thresh,
+                        self.ins_offset_eyeL,
+                        self.ins_offset_eyeR,
+                        self.ins_offset_bladder,
+                        img_input,
+                        img_output,
+                        bDebug)
+                except:
+                    (out_bDetected[i],
+                     out_angle_B[i],
+                     out_angle_L[i],
+                     out_angle_R[i],
+                     out_area_L[i],
+                     out_area_R[i],
+                     out_ax_min_L[i],
+                     out_ax_maj_L[i],
+                     out_ax_min_R[i],
+                     out_ax_maj_R[i]) = (False, 0,
+                                         0, 0, 0, 0,
+                                         0, 0, 0, 0)
+                
                 if out_bDetected[i]:
                     print(f"Frame #{int(out_frame_no[i])} of",
                         f"{len(file_list)} succesfully processed.")
@@ -328,33 +359,43 @@ class Processing(Screen):
             nDetected = count_nonzero(out_bDetected)
             print(f"{self.nFrames - nDetected} out of",
                   f"{self.nFrames} frames failed.")
-
         # test/debug mode
         else:
             bDebug = True
-            (bDetected,
-             body_angle,
-             eye_angle_L,
-             eye_angle_R,
-             eye_area_L,
-             eye_area_R,
-             ax_min_L,
-             ax_maj_L,
-             ax_min_R,
-             ax_maj_R
-             ) = d.main(
-                 self.TIMEBAR_YPOS_THRESH,
-                 self.brt_bounds_eye,
-                 self.len_bounds_eye,
-                 self.brt_bounds_bladder,
-                 self.len_bounds_bladder,
-                 self.Hu_dist_thresh,
-                 self.ins_offset_eyeL,
-                 self.ins_offset_eyeR,
-                 self.ins_offset_bladder,
-                 self.frame,
-                 self.frame_processed,
-                 bDebug)
+            try:
+                (bDetected,
+                body_angle,
+                eye_angle_L,
+                eye_angle_R,
+                eye_area_L,
+                eye_area_R,
+                ax_min_L,
+                ax_maj_L,
+                ax_min_R,
+                ax_maj_R
+                ) = d.main(
+                    self.crop_ratio,
+                    self.brt_bounds_eye,
+                    self.len_bounds_eye,
+                    self.brt_bounds_bladder,
+                    self.len_bounds_bladder,
+                    self.Hu_dist_thresh,
+                    self.ins_offset_eyeL,
+                    self.ins_offset_eyeR,
+                    self.ins_offset_bladder,
+                    self.frame,
+                    self.frame_processed,
+                    bDebug)
+            except:
+                (bDetected, body_angle,
+                eye_angle_L, eye_angle_R,
+                eye_area_L, eye_area_R,
+                ax_min_L, ax_maj_L,
+                ax_min_R, ax_maj_R
+                 ) = (False, 0,
+                      0, 0, 0, 0,
+                      0, 0, 0 ,0)
+                print("ERROR: try adjusting the settings")
             if(bDetected):
                 print(f"body_angle: {body_angle}")
                 print(f"eye_angle_L: {eye_angle_L}")
@@ -366,6 +407,7 @@ class Processing(Screen):
                 print(f"eye_axis_min_R: {ax_min_R}")
                 print(f"eye_axis_maj_R: {ax_maj_R}")
             self.load_images()
+            self.ids.preview_proc.reload()
 
     def normalize_area(self, area):
         mean_area = mean(area)
@@ -382,6 +424,11 @@ class Processing(Screen):
         out_angle_wrtB_R = out_angle_R - out_angle_B
         out_angle_wrtB_L = self.fix_twisted_eyes(out_angle_wrtB_L)
         out_angle_wrtB_R = self.fix_twisted_eyes(out_angle_wrtB_R)
+        # invert eye angle w.r.t. body
+        # so that pos. value is to the right
+        # and neg. value is to the left
+        out_angle_wrtB_L *= -1
+        out_angle_wrtB_R *= -1
         out_angVel_L = self.get_angVel(out_angle_L, 1/self.fps)
         out_angVel_R = self.get_angVel(out_angle_R, 1/self.fps)
         out_angVel_wrtB_L = self.get_angVel(out_angle_wrtB_L, 1/self.fps)
@@ -797,6 +844,7 @@ class Plotting(Screen):
         default_graph = join(
             self.result_path, ".blank.png")
         if not exists(default_graph):
+            vfe.createFolder(self.result_path)
             pt.generate_blank(default_graph)
         self.graph_file = default_graph
         self.load()
@@ -846,7 +894,7 @@ class ZebrafishApp(App):
         return wm_kv
 
 if __name__ == '__main__':
-    Window.size = (1200, 900)
+    Window.size = (1300, 950)
     Window.top = 50
     Window.left = 100
     ZebrafishApp().run()
