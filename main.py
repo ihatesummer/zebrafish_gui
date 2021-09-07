@@ -14,6 +14,7 @@ from scipy.fft import rfft, rfftfreq
 from datetime import datetime
 from decord import VideoReader, cpu, gpu
 import threading
+import numpy as np
 import frame_extractor as vfe
 import detector as d
 import plotter as pt
@@ -21,6 +22,7 @@ import kivy
 kivy.require('2.0.0')
 
 Config.set('kivy', 'exit_on_escape', '0')
+np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning) 
 
 class WindowManager(ScreenManager):
     pass
@@ -179,9 +181,8 @@ class Processing(Screen):
                                        self.vid_name)
         self.ids.frame_slider.max = self.nFrames - 1
         self.load_images()
-        self.ids.vid_selected.text = 'Selected: "' + \
-            self.vid_name + '"' + \
-            f"  -  total {self.nFrames} frames"
+        self.ids.vid_selected.text = \
+            f"[color=aaff00]{self.vid_name}[/color] ({self.nFrames} frames) selected."
         self.save_path = join(
             getcwd(), "results", self.vid_name)
         self.load_settings()
@@ -269,13 +270,15 @@ class Processing(Screen):
             self.ins_offset_bladder = loaded['ins_offset_bladder']        
         self.upload_properties_to_gui()
 
-    def detection(self, frame):
+    def detection(self, frame, debug):
         if frame == "all":
-            bDebug = False
             file_list = []
             try:
                 for file_name in listdir(self.img_path):
-                    if file_name[0].isdigit():
+                    bProcessedfile = not file_name[0].isdigit()
+                    # file_name[:-4] through file_name[:-1] = ".png"
+                    bDebugFile = not file_name[-5].isdigit()
+                    if not (bProcessedfile or bDebugFile):
                         file_list.append(file_name)
             except:
                 return None
@@ -323,7 +326,7 @@ class Processing(Screen):
                         self.ins_offset_bladder,
                         img_input,
                         img_output,
-                        bDebug)
+                        debug)
                 except:
                     (out_bDetected[i],
                      out_angle_B[i],
@@ -361,19 +364,8 @@ class Processing(Screen):
                   f"{self.nFrames} frames failed.")
         # test/debug mode
         else:
-            bDebug = True
             try:
-                (bDetected,
-                body_angle,
-                eye_angle_L,
-                eye_angle_R,
-                eye_area_L,
-                eye_area_R,
-                ax_min_L,
-                ax_maj_L,
-                ax_min_R,
-                ax_maj_R
-                ) = d.main(
+                savename = d.main(
                     self.crop_ratio,
                     self.brt_bounds_eye,
                     self.len_bounds_eye,
@@ -385,29 +377,12 @@ class Processing(Screen):
                     self.ins_offset_bladder,
                     self.frame,
                     self.frame_processed,
-                    bDebug)
+                    debug)
+                self.ids.preview_proc.source = savename
+                self.ids.preview_proc.reload()
+                # self.load_images()
             except:
-                (bDetected, body_angle,
-                eye_angle_L, eye_angle_R,
-                eye_area_L, eye_area_R,
-                ax_min_L, ax_maj_L,
-                ax_min_R, ax_maj_R
-                 ) = (False, 0,
-                      0, 0, 0, 0,
-                      0, 0, 0 ,0)
                 print("ERROR: try adjusting the settings")
-            if(bDetected):
-                print(f"body_angle: {body_angle}")
-                print(f"eye_angle_L: {eye_angle_L}")
-                print(f"eye_angle_R: {eye_angle_R}")
-                print(f"eye_area_L: {eye_area_L}")
-                print(f"eye_area_R: {eye_area_R}")
-                print(f"eye_axis_min_L: {ax_min_L}")
-                print(f"eye_axis_maj_L: {ax_maj_L}")
-                print(f"eye_axis_min_R: {ax_min_R}")
-                print(f"eye_axis_maj_R: {ax_maj_R}")
-            self.load_images()
-            self.ids.preview_proc.reload()
 
     def normalize_area(self, area):
         mean_area = mean(area)
@@ -838,7 +813,7 @@ class Plotting(Screen):
         self.result_path = join(
             getcwd(), "results", self.vid_name)
         self.ids.vid_selected.text = \
-            'Selected: "' + self.vid_name + '"'
+            f"[color=aaff00]{self.vid_name}[/color] selected."
         self.data_file = join(self.result_path, "result.csv")
 
         default_graph = join(
@@ -894,7 +869,7 @@ class ZebrafishApp(App):
         return wm_kv
 
 if __name__ == '__main__':
-    Window.size = (1300, 950)
+    Window.size = (1200, 780)
     Window.top = 50
     Window.left = 100
     ZebrafishApp().run()

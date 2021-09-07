@@ -8,7 +8,9 @@
     color: (1, 1, 1, 1)
     font_size: 15
 <Label>:
-    background_color: (0.1, 0.1, 0.1, 1)
+    background_color: (1, 1, 1, 0.05)
+    bold: True
+    font_size: 15
     canvas.before:
         Color:
             rgba: self.background_color
@@ -16,10 +18,9 @@
             size: self.size
             pos: self.pos
 <FileChooserListView>:
-    color: (1, 1, 1, 1)
-    canvas.before:
+    canvas.after:
         Color:
-            rgb: 1, 0, 0
-        Rectangle:
-            pos: self.pos
-            size: self.size
+            rgba: 1, 1, 1, 1
+        Line:
+            width: 0.5
+            rectangle: self.x, self.y, self.width, self.height

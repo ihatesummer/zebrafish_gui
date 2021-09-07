@@ -26,25 +26,70 @@ YELLOW = (0, 255, 255)
 PURPLE = (255, 0, 255)
 
 
+def alloc_result_space(nFrames):
+    # bool, True by default
+    out_bDetected = zeros(nFrames) < 1
+    # int, from 0 to nFrames-1
+    out_frame_no = zeros(nFrames)
+    # float, body eye angle [degree]
+    out_angle_B= zeros(nFrames)
+    # float, left eye angle [degree]
+    out_angle_L = zeros(nFrames)
+    # float, right eye angle [degree]
+    out_angle_R = zeros(nFrames)
+    # float, left eye area
+    out_area_L = zeros(nFrames)
+    # float, right eye area
+    out_area_R= zeros(nFrames)
+    # float, left eye minor axis length
+    out_ax_min_L = zeros(nFrames)
+    # float, left eye major axis length
+    out_ax_maj_L = zeros(nFrames)
+    # float, right eye minor axis length
+    out_ax_min_R = zeros(nFrames)
+    # float, right eye major axis length
+    out_ax_maj_R = zeros(nFrames)
+
+    return (out_bDetected, out_frame_no,
+            out_angle_B,
+            out_angle_L, out_angle_R,
+            out_area_L, out_area_R,
+            out_ax_min_L, out_ax_maj_L,
+            out_ax_min_R, out_ax_maj_R)
+
+
+def get_frame_no(filename: str) -> int:
+    """
+    Extracts number from a given filename.
+    Error when the filename contains more than one numbers.
+    """
+    num = findall(r'\d+', filename)
+    if len(num) == 1:
+        return int(num[0])
+    else:
+        print("ERROR: Can't retrieve frame number ; \
+              filename contains more than one number")
+        return None
+
+
 def get_midpoint(c1, c2):
     """
-    Calculates the (x,y) indices of two given 2D points
-    :param c1: coordinates of the first point; [int, int]
-    :param c2: coordinates of the second point; [int, int]
+    Calculates (x,y) indices of Euclidean mean
+    of two given 2D points
+    :param c1: coordinate of the first point; [int, int]
+    :param c2: coordinate of the second point; [int, int]
     """
     return (int((c1[0]+c2[0])/2), int((c1[1]+c2[1])/2))
 
 
 def crop_image(img, hor, vert):
     """
-    Crops the image by given ratios (0.0~1.0)
-    :param img: original cv image source
-    :param hor: starting and ending ratios (left to right)
-                of the desired horizontal crop;
-                [float, float]
-    :param hor: starting and ending ratios (top to bottom)
-                of the desired vertical crop;
-                [float, float]
+    Crops image by given ratios (0.0~1.0)
+    :param img: original openCV image source
+    :param hor: starting and ending horizontal ratios
+                (left to right) [float, float]
+    :param hor: starting and ending vertical ratios
+                (top to bottom) [float, float]
     """
     height, width = img.shape[0:2]
     hor_left = int(width*hor[0])
@@ -58,31 +103,31 @@ def crop_image(img, hor, vert):
 
 def get_binary_brightness(img, bound):
     """
-    Convert the pixels to either black or white.
+    Converts all pixels to either black or white.
     If a pixel's brightness is between
-    the low and high thresholds,
-    it converts to white. Otherwise, 
-    it is converted to black.
+    the given bound, it converts to white.
+    Otherwise, it is converted to black.
     :param img: original cv image source
     :param bound: low and high thresholds
-                  (0=darkest ~ 255=brightest)
+                  (0=darkest, 255=brightest)
+                  [int, int]
     """
     gray = cvtColor(img, COLOR_BGR2GRAY)
     black_or_white = inRange(gray, bound[0], bound[1])
     return black_or_white
 
 
-def get_contours(img_bin_brt, bounds_length):
-
+def get_contours(img_bin_brt):
+    """
+    Get all contours within the length bound.
+    :param img_bin_brt: black-and-white image 
+    """
     all_contours, _ = findContours(
         img_bin_brt,
         mode=RETR_EXTERNAL,
         method=CHAIN_APPROX_NONE)
 
-    filtered_contours = filter_by_length(
-        all_contours, bounds_length)
-
-    return all_contours, filtered_contours
+    return all_contours
 
 
 def filter_by_length(contours, length_treshold):
@@ -96,7 +141,7 @@ def filter_by_length(contours, length_treshold):
     return filtered_contours
 
 
-def remove_non_eyes(eyes, diff_thresh, bDebug):
+def remove_non_eyes(eyes, diff_thresh, debug):
     """
     Removes contour(s) that are not likely eye(s)
     by comparing shapes (Hu moments) with each other.
@@ -107,9 +152,8 @@ def remove_non_eyes(eyes, diff_thresh, bDebug):
                         than this threshold, that contour
                         is considered not an eye
     """
-    if bDebug:
+    if debug != None:
         print(f"{len(eyes)} contours are found as potential eyes...")
-        print(f"Hu distance threshold: {diff_thresh}")
     remove_idx = array([], dtype=int)
     for i in range(len(eyes)):
         diff_list = []
@@ -118,11 +162,11 @@ def remove_non_eyes(eyes, diff_thresh, bDebug):
                 shape_diff = matchShapes(
                     eyes[i], eyes[j], CONTOURS_MATCH_I1, 0)
                 diff_list.append(shape_diff)
-                if bDebug:
+                if debug != None:
                     print(f"Hu distance of contours ({i, j}): {shape_diff}")
         if all(diff > diff_thresh for diff in diff_list):
             remove_idx = append(remove_idx, i)
-            if bDebug:
+            if debug != None:
                 print(f"Eye(s) {remove_idx} removed.")
 
     eyes_filtered = delete(eyes, remove_idx, axis=0)
@@ -197,52 +241,6 @@ def remove_false_bladder(bladders, eyes):
     return bladders[argmax_idx]
 
 
-def get_frame_no(filename: str) -> int:
-    """
-    Extracts number from a given filename.
-    Error when the filename contains more than one numbers.
-    """
-    num = findall(r'\d+', filename)
-    if len(num) == 1:
-        return int(num[0])
-    else:
-        print("ERROR: Can't retrieve frame number ; \
-              filename contains more than one number")
-        return None
-
-
-def alloc_result_space(nFrames):
-    # bool, True by default
-    out_bDetected = zeros(nFrames) < 1
-    # int, from 0 to nFrames-1
-    out_frame_no = zeros(nFrames)
-    # float, body eye angle [degree]
-    out_angle_B= zeros(nFrames)
-    # float, left eye angle [degree]
-    out_angle_L = zeros(nFrames)
-    # float, right eye angle [degree]
-    out_angle_R = zeros(nFrames)
-    # float, left eye area
-    out_area_L = zeros(nFrames)
-    # float, right eye area
-    out_area_R= zeros(nFrames)
-    # float, left eye minor axis length
-    out_ax_min_L = zeros(nFrames)
-    # float, left eye major axis length
-    out_ax_maj_L = zeros(nFrames)
-    # float, right eye minor axis length
-    out_ax_min_R = zeros(nFrames)
-    # float, right eye major axis length
-    out_ax_maj_R = zeros(nFrames)
-
-    return (out_bDetected, out_frame_no,
-            out_angle_B,
-            out_angle_L, out_angle_R,
-            out_area_L, out_area_R,
-            out_ax_min_L, out_ax_maj_L,
-            out_ax_min_R, out_ax_maj_R)
-
-
 def get_angle(ref_point, measure_point):
     # since y-axis is flipped in CV.
     yDiff = -(measure_point[1]-ref_point[1])
@@ -264,10 +262,9 @@ def main(crop_ratio,
          inscription_pos_offset_bladder,
          img_input,
          img_output,
-         bDebug):
+         debug):
     """
-    Inscribes the eyes and body angles onto the pictures
-    and also saves as a csv file
+    Detects and inscribes angles of eyes and body.
     :param IMG_PATH: the parent folder of the source
                      and destination image folders
     :param brt_bounds_eye: brightness bounds [low, high] of the eyes
@@ -282,49 +279,65 @@ def main(crop_ratio,
                         (left to right for horizontal,
                         top to bottom for vertical)
                         of the desired crop
+    :param debug: either (None, "crop", "eye_brt", "eye_cnt",
+                  "eye_hu", "blad_brt", "blad_cnt")
     """
     bDetected = True
+    font_size = 0.5
+    font_thickness = 1
     img = imread(img_input)
 
     crop_hor, crop_vert = crop_ratio
     img = crop_image(img, crop_hor, crop_vert)
-    if bDebug:
-        imshow('Cropped image', img)
-        waitKey(0)
-        destroyAllWindows()
+    if debug == "crop":
+        # imshow('Cropped image', img)
+        # waitKey(0)
+        # destroyAllWindows()
+        savename = f"{img_input[:-4]}" + "_cropped.png"
+        imwrite(savename, img)
+        return savename
     
     # Eyes
     img_bin_brt = get_binary_brightness(img, brt_bounds_eye)
     
-    if bDebug:
-        imshow(
-            'Binary image <Eyes>',
-            img_bin_brt)
-        waitKey(0)
-        destroyAllWindows()
+    if debug == "eye_brt":
+        savename = f"{img_input[:-4]}" + "_eyebrt.png"
+        imwrite(savename, img_bin_brt)
+        return savename
+        # imshow(
+        #     'Binary image <Eyes>',
+        #     img_bin_brt)
+        # waitKey(0)
+        # destroyAllWindows()
 
-    all_cnt_eyes, filtered_cnt_eyes = get_contours(
-        img_bin_brt, len_bounds_eye)
-
-    if bDebug:
-        print("Length of all contours:")
+    all_cnt_eyes = get_contours(img_bin_brt)
+    filtered_cnt_eyes = filter_by_length(
+        all_cnt_eyes, len_bounds_eye)
+    if debug == "eye_cnt":
+        print("Lengths of all contours:")
+        lens = []
         for contour in all_cnt_eyes:
-            print(len(contour))
+            lens.append(len(contour))
+        print(lens)
         tmp_img = img.copy()
         img_all_contours = drawContours(
             tmp_img, all_cnt_eyes, -1, YELLOW, 3)
 
         print("Filtering contours with length bounds of ",
               len_bounds_eye, "...")
+        print("Lengths of filtered contours:")
+        lens = []
         for contour in filtered_cnt_eyes:
-            print("Length of filtered contours:",
-                  len(contour))
-        print(f"Total {len(filtered_cnt_eyes)} contours found.")
+            lens.append(len(contour))
+        print(lens)
         img_len_fil_con = drawContours(
             img_all_contours, filtered_cnt_eyes, -1, RED, 2)
-        imshow('Length-filtered contours <Eyes>', img_len_fil_con)
-        waitKey(0)
-        destroyAllWindows()
+        # imshow('Length-filtered contours <Eyes>', img_len_fil_con)
+        # waitKey(0)
+        # destroyAllWindows()
+        savename = f"{img_input[:-4]}" + "_eyecnt.png"
+        imwrite(savename, img_len_fil_con)
+        return savename
     
     '''
     When too many eyes are detected,
@@ -332,7 +345,7 @@ def main(crop_ratio,
     '''
     while len(filtered_cnt_eyes) > 2:
         filtered_cnt_eyes, removal_count = remove_non_eyes(
-            filtered_cnt_eyes, Hu_dist_thresh, bDebug)
+            filtered_cnt_eyes, Hu_dist_thresh, debug)
         if removal_count==0:
             print("ERROR: failed at removing false eye(s)."
                   "Try adjusting the Hu distance threshold")
@@ -352,60 +365,72 @@ def main(crop_ratio,
     tmp_brt_ub = brt_bounds_eye[1]
     while(len(filtered_cnt_eyes) < 2):
         tmp_brt_ub -= 5
+        print(f"Insufficient eyes detected for {img_input}. Lowering the brightness upper bound to {tmp_brt_ub}...")
         if tmp_brt_ub < 0:
-            print(f"ERROR: insufficient eyes detected for {img_input}")
+            print(f"ERROR: Can't detect two eyes for {img_input}")
             bDetected = False
             break
         else:
             img_bin_brt = get_binary_brightness(
                 img, [brt_bounds_eye[0], tmp_brt_ub])
-            
-            _, filtered_cnt_eyes = get_contours(img_bin_brt,
-                                   len_bounds_eye)
+            filtered_cnt_eyes = filter_by_length(all_cnt_eyes, len_bounds_eye)
     if not bDetected:
         print(f"ERROR: Failed at detecting 2 eyes for {img_input}")
         return bDetected, 0, 0, 0
     else:
-        if bDebug:
+        if debug == "eye_hu":
             print(f"2 eyes successfully detected for {img_input}")
             tmp_img = img.copy()
             img_len_fil_con = drawContours(
                 tmp_img, filtered_cnt_eyes, -1, GREEN, 2)
-            imshow(f'Detected eyes for {img_input}', img_len_fil_con)
-            waitKey(0)
-            destroyAllWindows()
+            # imshow(f'Detected eyes for {img_input}', img_len_fil_con)
+            # waitKey(0)
+            # destroyAllWindows()
+            savename = f"{img_input[:-4]}" + "_eyeresult.png"
+            imwrite(savename, img_len_fil_con)
+            return savename
 
     # Bladder
     img_bin_brt = get_binary_brightness(img, brt_bounds_bladder)
     
-    if bDebug:
-        imshow(
-            'Binary image <Bladder>',
-            img_bin_brt)
-        waitKey(0)
-        destroyAllWindows()
+    if debug == "blad_brt":
+        # imshow(
+        #     'Binary image <Bladder>',
+        #     img_bin_brt)
+        # waitKey(0)
+        # destroyAllWindows()
+        savename = f"{img_input[:-4]}" + "_bladbrt.png"
+        imwrite(savename, img_bin_brt)
+        return savename
 
-    all_cnt_blad, filtered_cnt_blad = get_contours(
-        img_bin_brt, len_bounds_bladder)
+    all_cnt_blad = get_contours(img_bin_brt)
+    filtered_cnt_blad = filter_by_length(all_cnt_blad, len_bounds_bladder)
 
-    if bDebug:
+    if debug == "blad_cnt":
+        print("Lengths of all contours:")
+        lens = []
         for contour in all_cnt_blad:
-            print("Length of all contours:", len(contour))
+            lens.append(len(contour))
+        print(lens)
         tmp_img = img.copy()
         img_all_contours = drawContours(
             tmp_img, all_cnt_blad, -1, YELLOW, 3)
 
         print("Filtering contours with length bounds of ",
               len_bounds_bladder, "...")
+        print("Lengths of filtered contours:")
+        lens = []
         for contour in filtered_cnt_blad:
-            print("Length of filtered contours:",
-                  len(contour))
-        print(f"Total {len(filtered_cnt_blad)} contours found.")
+            lens.append(len(contour))
+        print(lens)
         img_len_fil_con = drawContours(
             img_all_contours, filtered_cnt_blad, -1, RED, 2)
-        imshow('Length-filtered contours <Bladder>', img_len_fil_con)
-        waitKey(0)
-        destroyAllWindows()
+        # imshow('Length-filtered contours <Bladder>', img_len_fil_con)
+        # waitKey(0)
+        # destroyAllWindows()
+        savename = f"{img_input[:-4]}" + "_bladcnt.png"
+        imwrite(savename, img_len_fil_con)
+        return savename
 
     if len(filtered_cnt_blad) != 1:
         if len(filtered_cnt_blad) == 0:
@@ -414,7 +439,7 @@ def main(crop_ratio,
             return bDetected, 0, 0, 0
 
         elif (len(filtered_cnt_blad) > 1):
-            if bDebug:
+            if debug == "blad_cnt":
                 print(f"{len(filtered_cnt_blad)} bladder candidates found.",
                 "Removing false bladder(s)...")
             filtered_cnt_blad = remove_false_bladder(
@@ -425,7 +450,7 @@ def main(crop_ratio,
         print(f"ERROR: Failed at detecting a bladder for {img_input}")
         return bDetected, 0, 0, 0
     else:
-        if bDebug:
+        if debug == "blad_cnt":
             print(f"Bladder successfully detected for {img_input}")
             tmp_img = img.copy()
             img_len_fil_con = drawContours(
@@ -471,7 +496,7 @@ def main(crop_ratio,
         f'{body_angle:.2f} deg',
         bladder_center,
         inscription_pos_offset_bladder,
-        0.5, BLUE, 1)
+        font_size, BLUE, font_thickness)
     line(inscribed_img, point_btwn_eyes, bladder_center, BLUE, 1)
 
     angles_eye2blad = [0, 0]
@@ -501,13 +526,13 @@ def main(crop_ratio,
         f'{-(eyeL_angle-body_angle):.2f} deg',
         eye_centers[left_eye_idx],
         inscription_pos_offset_eyeL,
-        0.5, BLUE, 1)
+        font_size, BLUE, font_thickness)
     inscribe_text(
         inscribed_img,
         f'{-(eyeR_angle-body_angle):.2f} deg',
         eye_centers[right_eye_idx],
         inscription_pos_offset_eyeR,
-        0.5, BLUE, 1)
+        font_size, BLUE, font_thickness)
     areaOffsetL = inscription_pos_offset_eyeL.copy()
     areaOffsetL[1] += 20
     inscribe_text(
@@ -515,7 +540,7 @@ def main(crop_ratio,
         f'{eyeL_area:.2f}',
         eye_centers[left_eye_idx],
         areaOffsetL,
-        0.5, GREEN, 1)
+        font_size, GREEN, font_thickness)
     areaOffsetR = inscription_pos_offset_eyeR.copy()
     areaOffsetR[1] += 20
     inscribe_text(
@@ -523,12 +548,14 @@ def main(crop_ratio,
         f'{eyeR_area:.2f}',
         eye_centers[right_eye_idx],
         areaOffsetR,
-        0.5, GREEN, 1)
+        font_size, GREEN, font_thickness)
 
-    if bDebug:
-        imshow("fish_eyes", inscribed_img)
-        waitKey(0)
-        destroyAllWindows()
+    if debug == "all":
+        # imshow("fish_eyes", inscribed_img)
+        # waitKey(0)
+        # destroyAllWindows()
+        imwrite(img_output, inscribed_img)
+        return img_output
 
     imwrite(img_output, inscribed_img)
     return (bDetected, body_angle,
