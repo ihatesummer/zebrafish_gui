@@ -8,8 +8,10 @@ from cv2 import imwrite, cvtColor, COLOR_RGB2BGR
 from os import getcwd, listdir
 from os.path import join, normpath, basename, exists
 from json import dump, load
-from numpy import (abs, vstack, savetxt, count_nonzero,
-                   linspace, loadtxt, shape, mean)
+from numpy import (abs, append, vstack,
+                   convolve, count_nonzero,
+                   linspace, loadtxt,
+                   mean, ones, savetxt)
 from scipy.fft import rfft, rfftfreq
 from datetime import datetime
 from decord import VideoReader, cpu, gpu
@@ -172,6 +174,8 @@ class Processing(Screen):
                 print(f"{frame_counter+1} of {self.nFrames} extracted.")
         except:
             print("ERROR: No video is selected")
+        
+        self.ids.preview_orig.reload()
 
     def set_vid_name(self):
         vid_path = self.ids.filechooser.selection[0]
@@ -439,6 +443,7 @@ class Processing(Screen):
                 angle_list[i] = angle-180
         return angle_list
 
+    @classmethod
     def get_angVel(self, angle_list, deltaTime):
         angVel_list = angle_list.copy()
         angVel_list[0] = 0
@@ -465,6 +470,8 @@ class Plotting(Screen):
     wrt_B = True
     x_range = [0, 0]
     y_range = [0, 0]
+    window_size = 1
+    fps = 1
     c_frame_no = None
     c_time = None
     c_bDetected = None
@@ -487,6 +494,35 @@ class Plotting(Screen):
         self.graph_title = self.ids.graph_title.text
         print("Update - graph title: ", self.graph_title)
 
+    def set_window_size(self):
+        try:
+            self.window_size = int(self.ids.window_size.text)
+            print("Update - window size: ", self.window_size)
+        except:
+            print("ERROR: Please enter an integer for window size.")
+
+    def set_fps(self):
+        try:
+            self.fps = int(self.ids.fps.text)
+            print("Update - FPS: ", self.fps)
+        except:
+            print("ERROR: Please enter an integer for FPS.")
+
+    def moving_average(self, x, w):
+        m_avg = convolve(x, ones(w), 'valid') / w
+        # duplicate the last element
+        # in order to fit the original length
+        m_avg_extended = append(m_avg, ones(w-1)*m_avg[-1])
+        return m_avg_extended
+
+    def get_angVel(self, angle_list, deltaTime):
+        angVel_list = angle_list.copy()
+        for i in range(1, len(angVel_list)):
+            angVel_list[i] = \
+                (angle_list[i] - angle_list[i-1]) / deltaTime
+        angVel_list[0] = angVel_list[1]
+        return angVel_list
+
     def fetch_x(self):
         if self.axes_selection["x"] == "frame":
             x = self.c_frame_no
@@ -508,28 +544,51 @@ class Plotting(Screen):
         y_selected = self.axes_selection["y"]
         if "left" in self.eye_selection:
             if y_selected == "area":
-                y_list.append(self.c_area_norm_L)
+                y_list.append(
+                    self.moving_average(
+                        self.c_area_norm_L,
+                        self.window_size))
                 y_labels.append("Normalized area [0-1]")
                 pass
             if y_selected == "axRatio":
-                y_list.append(self.c_ax_ratio_L)
+                y_list.append(
+                    self.moving_average(
+                        self.c_ax_ratio_L,
+                        self.window_size))
                 y_labels.append("Axes ratio [major:minor]")
                 pass
             if self.wrt_B == True:
                 if y_selected == "angle":
-                    y_list.append(self.c_angle_wrtB_L)
+                    y_list.append(
+                        self.moving_average(
+                            self.c_angle_wrtB_L,
+                            self.window_size))
                     y_labels.append("angle [degree]")
                 elif y_selected == "angVel":
-                    y_list.append(self.c_angVel_wrtB_L)
+                    ang_wrtB_L = self.moving_average(
+                        self.c_angle_wrtB_L,
+                        self.window_size)
+                    angVel_wrtB_L = self.get_angVel(
+                        ang_wrtB_L,
+                        1/self.fps)
+                    y_list.append(angVel_wrtB_L)
                     y_labels.append("angular velocity [degree/sec]")
                 else:
                     pass
             else:
                 if y_selected == "angle":
+                    y_list.append(
+                        self.moving_average(
+                            self.c_angle_L,
+                            self.window_size))
                     y_labels.append("angle [degree]")
-                    y_list.append(self.c_angle_L)
                 elif y_selected == "angVel":
-                    y_list.append(self.c_angVel_L)
+                    ang_L = self.moving_average(
+                        self.c_angle_L,
+                        self.window_size)
+                    angVel_L = self.get_angVel(
+                        ang_L, 1/self.fps)
+                    y_list.append(angVel_L)
                     y_labels.append("angular velocity [degree/sec]")
                 else:
                     pass
@@ -542,19 +601,37 @@ class Plotting(Screen):
                 y_labels.append("Axes ratio [major:minor]")
             if self.wrt_B == True:
                 if y_selected == "angle":
-                    y_list.append(self.c_angle_wrtB_R)
+                    y_list.append(
+                        self.moving_average(
+                            self.c_angle_wrtB_R,
+                            self.window_size))
                     y_labels.append("angle [degree]")
                 elif y_selected == "angVel":
-                    y_list.append(self.c_angVel_wrtB_R)
+                    ang_wrtB_R = self.moving_average(
+                        self.c_angle_wrtB_R,
+                        self.window_size)
+                    angVel_wrtB_R = self.get_angVel(
+                        ang_wrtB_R,
+                        1/self.fps)
+                    y_list.append(angVel_wrtB_R)
                     y_labels.append("angular velocity [degree/sec]")
                 else:
                     pass
             else:
                 if y_selected == "angle":
-                    y_list.append(self.c_angle_R)
+                    y_list.append(
+                        self.moving_average(
+                            self.c_angle_R,
+                            self.window_size))
                     y_labels.append("angle [degree]")
                 elif y_selected == "angVel":
-                    y_list.append(self.c_angVel_R)
+                    ang_R = self.moving_average(
+                        self.c_angle_R,
+                        self.window_size)
+                    angVel_R = self.get_angVel(
+                        ang_R,
+                        1/self.fps)
+                    y_list.append(angVel_R)
                     y_labels.append("angular velocity [degree/sec]")
                 else:
                     pass
@@ -580,8 +657,7 @@ class Plotting(Screen):
         else:
             # Recursion until available
             return self.get_last_available(
-                y_part[:-1], bDetected_part[:-1]
-            )
+                y_part[:-1], bDetected_part[:-1])
 
     def interpolate(self, y):
         idx_last = int(max(self.c_frame_no))
@@ -606,41 +682,39 @@ class Plotting(Screen):
                 y[i] = (prev + next) / 2
             else:
                 pass
+        return y
 
     def generate_graph(self):
-        try:
-            x, xlabel = self.fetch_x()
-            y, y_label = self.fetch_y()
+        # try:
+        x, xlabel = self.fetch_x()
+        y, y_label = self.fetch_y()
 
-            for y_arr in y:
-                self.interpolate(y_arr)
-
-            if self.axes_selection["x"] == "freq":
-                for i, y_arr in enumerate(y):
-                    y[i] = abs(rfft(y_arr))
-                nSamples = int(max(self.c_frame_no))
-                sample_interval = self.c_time[1]
-                x = rfftfreq(nSamples, sample_interval)
-                idx_y_unit = y_label.index("[") - 1
-                y_label = y_label[:idx_y_unit] + " - Amplitude"
-            
-            now = datetime.now()
-            date_time = now.strftime("%Y_%m_%d-%H_%M_%S.png")
-            output = join(
-                self.result_path, date_time) 
-            pt.main(output,
-                    x, xlabel, self.x_range,
-                    y, y_label, self.y_range,
-                    self.eye_selection,
-                    self.custom_grid,
-                    self.custom_label,
-                    self.custom_eye_label,
-                    self.custom_colors,
-                    self.graph_title,
-                    self.axes_selection["x"])
-            self.graph_file = output
-        except:
-            print("ERROR: invalid configuration(s).")
+        if self.axes_selection["x"] == "freq":
+            for i, y_arr in enumerate(y):
+                y[i] = abs(rfft(y_arr))
+            nSamples = int(max(self.c_frame_no))
+            sample_interval = self.c_time[1]
+            x = rfftfreq(nSamples, sample_interval)
+            idx_y_unit = y_label.index("[") - 1
+            y_label = y_label[:idx_y_unit] + " - Amplitude"
+        
+        now = datetime.now()
+        date_time = now.strftime("%Y_%m_%d-%H_%M_%S.png")
+        output = join(
+            self.result_path, date_time) 
+        pt.main(output,
+                x, xlabel, self.x_range,
+                y, y_label, self.y_range,
+                self.eye_selection,
+                self.custom_grid,
+                self.custom_label,
+                self.custom_eye_label,
+                self.custom_colors,
+                self.graph_title,
+                self.axes_selection["x"])
+        self.graph_file = output
+        # except:
+        #     print("ERROR: invalid configuration(s).")
 
     def update_wrtB(self, instance, value):
         self.wrt_B = value
@@ -816,6 +890,18 @@ class Plotting(Screen):
             f"[color=aaff00]{self.vid_name}[/color] selected."
         self.data_file = join(self.result_path, "result.csv")
 
+        specific_setting = join(self.result_path, "settings.json")
+        if exists(specific_setting):
+            settings = specific_setting
+            print(f"Specific FPS loaded.")
+        else:
+            settings = "default_settings.json"
+            print(f"Default FPS loaded.")
+        with open(settings) as load_settings:
+            loaded = load(load_settings)
+            self.fps = loaded['fps']
+        self.ids.fps.text = str(self.fps)
+
         default_graph = join(
             self.result_path, ".blank.png")
         if not exists(default_graph):
@@ -836,25 +922,25 @@ class Plotting(Screen):
             self.c_frame_no = data_frame[:, 0]
             self.c_time = data_frame[:, 1]
             self.c_bDetected = data_frame[:, 2]
-            self.c_angle_B = data_frame[:, 3]
-            self.c_angle_L = data_frame[:, 4]
-            self.c_angle_wrtB_L = data_frame[:, 5]
-            self.c_angVel_L = data_frame[:, 6]
-            self.c_angVel_wrtB_L = data_frame[:, 7]
-            self.c_angle_R = data_frame[:, 8]
-            self.c_angle_wrtB_R = data_frame[:, 9]
-            self.c_angVel_R = data_frame[:, 10]
-            self.c_angVel_wrtB_R = data_frame[:, 11]
-            self.c_area_L = data_frame[:, 12]
-            self.c_area_R = data_frame[:, 13]
-            self.c_area_norm_L = data_frame[:, 14]
-            self.c_area_norm_R = data_frame[:, 15]
-            self.c_ax_min_L = data_frame[:, 16]
-            self.c_ax_maj_L = data_frame[:, 17]
-            self.c_ax_ratio_L = data_frame[:, 18]
-            self.c_ax_min_R = data_frame[:, 19]
-            self.c_ax_maj_R = data_frame[:, 20]
-            self.c_ax_ratio_R = data_frame[:, 21]
+            self.c_angle_B = self.interpolate(data_frame[:, 3])
+            self.c_angle_L = self.interpolate(data_frame[:, 4])
+            self.c_angle_wrtB_L = self.interpolate(data_frame[:, 5])
+            self.c_angVel_L = self.interpolate(data_frame[:, 6])
+            self.c_angVel_wrtB_L = self.interpolate(data_frame[:, 7])
+            self.c_angle_R = self.interpolate(data_frame[:, 8])
+            self.c_angle_wrtB_R = self.interpolate(data_frame[:, 9])
+            self.c_angVel_R = self.interpolate(data_frame[:, 10])
+            self.c_angVel_wrtB_R = self.interpolate(data_frame[:, 11])
+            self.c_area_L = self.interpolate(data_frame[:, 12])
+            self.c_area_R = self.interpolate(data_frame[:, 13])
+            self.c_area_norm_L = self.interpolate(data_frame[:, 14])
+            self.c_area_norm_R = self.interpolate(data_frame[:, 15])
+            self.c_ax_min_L = self.interpolate(data_frame[:, 16])
+            self.c_ax_maj_L = self.interpolate(data_frame[:, 17])
+            self.c_ax_ratio_L = self.interpolate(data_frame[:, 18])
+            self.c_ax_min_R = self.interpolate(data_frame[:, 19])
+            self.c_ax_maj_R = self.interpolate(data_frame[:, 20])
+            self.c_ax_ratio_R = self.interpolate(data_frame[:, 21])
 
         except:
             print("ERROR: Processing result data not available.")

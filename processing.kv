@@ -49,7 +49,7 @@
             height: 30
             spacing: 1
             Label:
-                size_hint: 0.9, None
+                size_hint: 0.85, None
                 height: 30
                 id: vid_selected
                 text: "Select a video from above..."
@@ -57,11 +57,11 @@
                 markup: True
             Label:
                 text: "Video FPS:"
-                size_hint: 0.06, None
+                size_hint: 0.075, None
                 height: 30
             TextInput:
                 id: fps
-                size_hint: 0.04, None
+                size_hint: 0.075, None
                 height: 30
                 multiline: False
                 on_text: root.set_properties("fps")
@@ -121,6 +121,7 @@
                     pos_hint: {'center_x': 0.5}
                     width: self.parent.width/9
                     height: 30
+                    spacing: 3
                     Label:
                         text: "Frame: "
                         background_color: (0, 0, 0, 1)
@@ -129,7 +130,7 @@
                         id: frame_no_input
                         multiline: False
                         text: str(root.frame_no)
-                        size_hint_x: 0.6
+                        size_hint_x: 0.5
                         on_text_validate: root.goto_frame()
             # Thresholds pane (right side)
             BoxLayout:

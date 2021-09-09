@@ -29,6 +29,8 @@
             BoxLayout:
                 orientation: "vertical"
                 size_hint: 0.5, 1
+                spacing: 3
+                padding: 3
                 BoxLayout:
                     orientation: "horizontal"
                     FileChooserListView:
@@ -44,29 +46,39 @@
                         font_size: 25
                         background_color: (1, 1, 1, 1)
                         on_press: filechooser._update_files()
-                Label:
+                BoxLayout:
+                    orientation: "horizontal"
                     size_hint: 1, None
                     height: 30
-                    id: vid_selected
-                    font_size: 22
-                    markup: True
-                    text: "Select a video from above ..."
+                    Label:
+                        id: vid_selected
+                        size_hint: 0.85, 1
+                        font_size: 20
+                        markup: True
+                        text: "Select a video from above ..."
+                    Label:
+                        text: "FPS: "
+                        size_hint: 0.075, 1
+                    TextInput:
+                        id: fps
+                        multiline: False
+                        size_hint: 0.075, 1
+                        on_text: root.set_fps()
                 Image:
                     id: preview_graph
                     size_hint: 1, None
-                    height: self.parent.height - 180
+                    height: self.parent.height - 200
                     source: root.graph_file
                     allow_stretch: True
             # Right Pane (axes settings)
             BoxLayout:
                 orientation: "vertical"
-                size_hint: 0.4, 1
+                size_hint: 0.5, 1
+                padding: 3
+                spacing: 3
                 GridLayout:
                     cols: 1
-                    spacing: 10
-                    padding: 10
-                    size_hint_y: None
-                    height: self.parent.height
+                    size_hint_y: 1
                     BoxLayout:
                         orientation: 'vertical'
                         size_hint_y: None
@@ -86,7 +98,7 @@
                             BoxLayout:
                                 orientation: 'horizontal'
                                 Label:
-                                    text: "time"
+                                    text: "Time [s]"
                                     background_color: (0,0,0,1)
                                 CheckBox:
                                     id: x_ax_time
@@ -94,14 +106,14 @@
                                     active: True
                                     on_active: root.update_axes_selection(self, self.active, "x", "time")
                                 Label:
-                                    text: "frame"
+                                    text: "Frame"
                                     background_color: (0,0,0,1)
                                 CheckBox:
                                     id: x_ax_frame
                                     group: "x-axis choice"
                                     on_active: root.update_axes_selection(self, self.active, "x", "frame")
                                 Label:
-                                    text: "freq."
+                                    text: "Frequency [Hz]"
                                     background_color: (0,0,0,1)
                                 CheckBox:
                                     id: x_ax_freq
@@ -217,7 +229,7 @@
                     BoxLayout:
                         orientation: 'vertical'
                         size_hint_y: None
-                        height: self.parent.height * 0.25
+                        height: self.parent.height * 0.4
                         Label:
                             text: "y-axis"
                             background_color: (0.5, 0.1, 0.1, 1)
@@ -233,35 +245,95 @@
                             BoxLayout:
                                 orientation: 'horizontal'
                                 Label:
-                                    text: "angle"
+                                    text: "Angle [deg.]"
+                                    size_hint_x: 0.4
                                     background_color: (0,0,0,1)
                                 CheckBox:
                                     group: "y-axis choice"
+                                    size_hint_x: 0.1
                                     id: y_ax_angle
                                     active: True
                                     disabled: False
                                     on_active: root.update_axes_selection(self, self.active, "y", "angle")
                                 Label:
-                                    text: "angVel"
+                                    text: "Angle Vel. [deg./s]"
+                                    size_hint_x: 0.4
                                     background_color: (0,0,0,1)
                                 CheckBox:
                                     group: "y-axis choice"
+                                    size_hint_x: 0.1
                                     id: y_ax_angVel
                                     disabled: False
                                     on_active: root.update_axes_selection(self, self.active, "y", "angVel")
+                            Label:
+                                text: ""
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            BoxLayout:
+                                orientation: 'horizontal'  
                                 Label:
-                                    text: "area"
+                                    text: "SPV"
+                                    size_hint_x: 0.4
                                     background_color: (0,0,0,1)
                                 CheckBox:
                                     group: "y-axis choice"
+                                    size_hint_x: 0.1
+                                    id: y_ax_SPV
+                                    disabled: False
+                                    on_active: root.update_axes_selection(self, self.active, "y", "spv")
+                                Label:
+                                    text: "Beats"
+                                    size_hint_x: 0.4
+                                    background_color: (0,0,0,1)
+                                CheckBox:
+                                    group: "y-axis choice"
+                                    size_hint_x: 0.1
+                                    id: y_ax_beats
+                                    disabled: False
+                                    on_active: root.update_axes_selection(self, self.active, "y", "beats")
+                            Label:
+                                text: ""
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            BoxLayout:
+                                orientation: 'horizontal' 
+                                Label:
+                                    text: "Saccade Frequency"
+                                    size_hint_x: 0.4
+                                    background_color: (0,0,0,1)
+                                CheckBox:
+                                    group: "y-axis choice"
+                                    size_hint_x: 0.1
+                                    id: y_ax_saccfreq
+                                    disabled: False
+                                    on_active: root.update_axes_selection(self, self.active, "y", "sacccfreq")
+                                Label:
+                                    text: ""
+                                    size_hint_x: 0.5
+                                    background_color: (0,0,0,1)
+                            Label:
+                                text: ""
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            BoxLayout:
+                                orientation: 'horizontal'
+                                Label:
+                                    text: "Norm. Area"
+                                    size_hint_x: 0.4
+                                    background_color: (0,0,0,1)
+                                CheckBox:
+                                    group: "y-axis choice"
+                                    size_hint_x: 0.1
                                     id: y_ax_area
                                     disabled: False
                                     on_active: root.update_axes_selection(self, self.active, "y", "area")
                                 Label:
-                                    text: "axRatio"
+                                    text: "Axes Ratio"
+                                    size_hint_x: 0.4
                                     background_color: (0,0,0,1)
                                 CheckBox:
                                     group: "y-axis choice"
+                                    size_hint_x: 0.1
                                     id: y_ax_axRatio
                                     disabled: False
                                     on_active: root.update_axes_selection(self, self.active, "y", "axRatio")
@@ -405,6 +477,7 @@
                                     active: True
                             Label:
                                 text: "w.r.t. body:"
+                                background_color: (0,0,0,1)
                                 size_hint_x: None
                                 width: self.parent.width * 0.2
                             BoxLayout:
@@ -467,7 +540,21 @@
                             TextInput:
                                 id: graph_title
                                 multiline: False
+                                size_hint_x: None
+                                width: self.parent.width * 0.4
                                 on_text: root.set_graph_title()
+                            Label:
+                                text: "Window size:"
+                                background_color: (0,0,0,1)
+                                size_hint_x: None
+                                width: self.parent.width * 0.2
+                            TextInput:
+                                id: window_size
+                                text: "1"
+                                multiline: False
+                                size_hint_x: None
+                                width: self.parent.width * 0.2
+                                on_text: root.set_window_size()
 
                     BoxLayout:
                         orientation: 'vertical'
