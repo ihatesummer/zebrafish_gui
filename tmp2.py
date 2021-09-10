@@ -1,7 +1,9 @@
 import numpy as np
 
-w = 5
 a = np.linspace(0, 4, 5)
 print(a)
-b = np.append(a, np.ones(w-1)*a[-1])
+idx = a > 2
+print(idx)
+print(not idx)
+b = a[a > 2]
 print(b)

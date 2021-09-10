@@ -8,6 +8,7 @@ from cv2 import imwrite, cvtColor, COLOR_RGB2BGR
 from os import getcwd, listdir
 from os.path import join, normpath, basename, exists
 from json import dump, load
+from matplotlib.pyplot import yscale
 from numpy import (abs, append, vstack,
                    convolve, count_nonzero,
                    linspace, loadtxt,
@@ -15,6 +16,7 @@ from numpy import (abs, append, vstack,
 from scipy.fft import rfft, rfftfreq
 from datetime import datetime
 from decord import VideoReader, cpu, gpu
+from scipy.signal import find_peaks
 import threading
 import numpy as np
 import frame_extractor as vfe
@@ -468,10 +470,13 @@ class Plotting(Screen):
     custom_colors = ["blue", "green"]
     graph_title = ""
     wrt_B = True
+    bNoData = False
     x_range = [0, 0]
     y_range = [0, 0]
     window_size = 1
     fps = 1
+    peak_prominence = 10
+    peak_margins = [0.5, 0.5]
     c_frame_no = None
     c_time = None
     c_bDetected = None
@@ -508,20 +513,136 @@ class Plotting(Screen):
         except:
             print("ERROR: Please enter an integer for FPS.")
 
-    def moving_average(self, x, w):
-        m_avg = convolve(x, ones(w), 'valid') / w
+    def set_peak_prominence(self):
+        try:
+            self.peak_prominence = float(self.ids.prominence.text)
+            print("Update - Peak prominence: ", self.peak_prominence)
+        except:
+            print("ERROR: Please enter a floating point for peak prominence.")
+
+    def set_peak_margins(self, left_or_right):
+        try:
+            if left_or_right == "left":
+                self.peak_margins[0] = float(self.ids.peak_margin_l.text)
+            if left_or_right == "right":
+                self.peak_margins[1] = float(self.ids.peak_margin_r.text)
+            print("Update - Peak margins: ", self.peak_margins)
+        except:
+            print("ERROR: Please enter floating points for margins.")
+
+    def get_timestamp_namepath(self):
+        now = datetime.now()
+        date_time = now.strftime("%Y_%m_%d-%H_%M_%S.png")
+        timestamp_namepath = join(
+            self.result_path, date_time)
+        return timestamp_namepath
+
+    def show_peaks(self):
+        if self.bNoData:
+            print("No datasheet available.")
+            return None
+        self.ids.x_ax_time.active = True
+        self.update_axes_selection(self, self.ids.x_ax_time.active, "x", "time")
+        self.ids.y_ax_angVel.active = True
+        self.update_axes_selection(self, self.ids.y_ax_angVel.active, "y", "angVel")
+
+        x, x_label = self.fetch_x()
+        y, y_label, _ = self.fetch_y()
+        output_namepath = self.get_timestamp_namepath()
+        pt.peak_preview(output_namepath,
+                        x, x_label, self.x_range,
+                        y, y_label, self.y_range,
+                        self.eye_selection,
+                        self.custom_grid,
+                        self.custom_label,
+                        self.custom_eye_label,
+                        self.custom_colors,
+                        self.graph_title,
+                        self.peak_prominence)
+        self.graph_file = output_namepath
+        self.ids.y_ax_SPV.active = True
+        self.update_axes_selection(self, self.ids.y_ax_SPV.active, "y", "spv")
+
+    def moving_average(self, x):
+        w = self.window_size
+        moving_avg = convolve(x, ones(w), 'valid') / w
         # duplicate the last element
         # in order to fit the original length
-        m_avg_extended = append(m_avg, ones(w-1)*m_avg[-1])
+        m_avg_extended = append(moving_avg,
+                                ones(w-1)*moving_avg[-1])
         return m_avg_extended
 
-    def get_angVel(self, angle_list, deltaTime):
+    def get_angVel(self, angle_list):
+        deltaTime = 1/self.fps
         angVel_list = angle_list.copy()
         for i in range(1, len(angVel_list)):
             angVel_list[i] = \
                 (angle_list[i] - angle_list[i-1]) / deltaTime
         angVel_list[0] = angVel_list[1]
         return angVel_list
+
+    def get_slowPhase_idx(self, y):
+        peaks, _ = find_peaks(-y,
+                              self.peak_prominence,
+                              distance=self.fps/2)
+        # Initialize as all True
+        idx_slowPhase = ones(len(y), dtype=bool) 
+        left_margin = int(self.peak_margins[0]*self.fps)
+        right_margin = int(self.peak_margins[1]*self.fps)
+        for i in range (-left_margin, right_margin):
+            idx_slowPhase[peaks+i] = False
+        return idx_slowPhase
+
+    def preprocess_angles(self, angle):
+        angle_processed = self.moving_average(angle)
+        angVel_processed = self.get_angVel(
+            angle_processed)
+        return angle_processed, angVel_processed
+
+    def choose_angle_data(self, angle, angVel, y_selected):
+        if y_selected == "angle":
+            y = angle
+            y_label = "angle [degree]"
+            idx = [None]
+        elif y_selected == "angVel":
+            y = angVel
+            y_label = "angular velocity [degree/sec]"
+            idx = [None]
+        elif y_selected == "spv":
+            y = angVel
+            y_label = "Slow phase velocity [degree/sec]"
+            idx = self.get_slowPhase_idx(angVel)
+        elif y_selected == "beats":
+            pass
+        elif y_selected == "sacc_freq":
+            pass
+        else:
+            return None
+        return y, y_label, idx
+
+    def get_eyeData_selection(self,
+                              eyeData_collection,
+                              selection):
+        (area, axRatio,
+         angle_wrtB, angle) = eyeData_collection
+        if selection == "area":
+            y = self.moving_average(area)
+            return y, "Normalized area [0-1]", [None]
+        if selection == "axRatio":
+            y = self.moving_average(axRatio)
+            return y, "Axes ratio [major:minor]", [None]
+
+        if self.wrt_B == True:
+            angle, angVel = self.preprocess_angles(
+                angle_wrtB)
+            y, y_label, idx = self.choose_angle_data(
+                angle, angVel, selection)
+        else:
+            angle, angVel = self.preprocess_angles(
+                angle)
+            y, y_label, idx = self.choose_angle_data(
+                angle, angVel, selection)
+        return y, y_label, idx
 
     def fetch_x(self):
         if self.axes_selection["x"] == "frame":
@@ -543,104 +664,36 @@ class Plotting(Screen):
         y_labels = []
         y_selected = self.axes_selection["y"]
         if "left" in self.eye_selection:
-            if y_selected == "area":
-                y_list.append(
-                    self.moving_average(
-                        self.c_area_norm_L,
-                        self.window_size))
-                y_labels.append("Normalized area [0-1]")
-                pass
-            if y_selected == "axRatio":
-                y_list.append(
-                    self.moving_average(
-                        self.c_ax_ratio_L,
-                        self.window_size))
-                y_labels.append("Axes ratio [major:minor]")
-                pass
-            if self.wrt_B == True:
-                if y_selected == "angle":
-                    y_list.append(
-                        self.moving_average(
-                            self.c_angle_wrtB_L,
-                            self.window_size))
-                    y_labels.append("angle [degree]")
-                elif y_selected == "angVel":
-                    ang_wrtB_L = self.moving_average(
-                        self.c_angle_wrtB_L,
-                        self.window_size)
-                    angVel_wrtB_L = self.get_angVel(
-                        ang_wrtB_L,
-                        1/self.fps)
-                    y_list.append(angVel_wrtB_L)
-                    y_labels.append("angular velocity [degree/sec]")
-                else:
-                    pass
-            else:
-                if y_selected == "angle":
-                    y_list.append(
-                        self.moving_average(
-                            self.c_angle_L,
-                            self.window_size))
-                    y_labels.append("angle [degree]")
-                elif y_selected == "angVel":
-                    ang_L = self.moving_average(
-                        self.c_angle_L,
-                        self.window_size)
-                    angVel_L = self.get_angVel(
-                        ang_L, 1/self.fps)
-                    y_list.append(angVel_L)
-                    y_labels.append("angular velocity [degree/sec]")
-                else:
-                    pass
+            left_eyeData_collection = (
+                self.c_area_norm_L,
+                self.c_ax_ratio_L,
+                self.c_angle_wrtB_L,
+                self.c_angle_L
+            )
+            y, y_label, idx = self.get_eyeData_selection(
+                left_eyeData_collection,
+                y_selected)
+            y_list.append(y)
+            y_labels.append(y_label)
+            
         if "right" in self.eye_selection:
-            if y_selected == "area":
-                y_list.append(self.c_area_norm_R)
-                y_labels.append("Normalized area [0-1]")
-            if y_selected == "axRatio":
-                y_list.append(self.c_ax_ratio_R)
-                y_labels.append("Axes ratio [major:minor]")
-            if self.wrt_B == True:
-                if y_selected == "angle":
-                    y_list.append(
-                        self.moving_average(
-                            self.c_angle_wrtB_R,
-                            self.window_size))
-                    y_labels.append("angle [degree]")
-                elif y_selected == "angVel":
-                    ang_wrtB_R = self.moving_average(
-                        self.c_angle_wrtB_R,
-                        self.window_size)
-                    angVel_wrtB_R = self.get_angVel(
-                        ang_wrtB_R,
-                        1/self.fps)
-                    y_list.append(angVel_wrtB_R)
-                    y_labels.append("angular velocity [degree/sec]")
-                else:
-                    pass
-            else:
-                if y_selected == "angle":
-                    y_list.append(
-                        self.moving_average(
-                            self.c_angle_R,
-                            self.window_size))
-                    y_labels.append("angle [degree]")
-                elif y_selected == "angVel":
-                    ang_R = self.moving_average(
-                        self.c_angle_R,
-                        self.window_size)
-                    angVel_R = self.get_angVel(
-                        ang_R,
-                        1/self.fps)
-                    y_list.append(angVel_R)
-                    y_labels.append("angular velocity [degree/sec]")
-                else:
-                    pass
+            right_eyeData_collection = (
+                self.c_area_norm_R,
+                self.c_ax_ratio_R,
+                self.c_angle_wrtB_R,
+                self.c_angle_R
+            )
+            y, y_label, idx = self.get_eyeData_selection(
+                right_eyeData_collection,
+                y_selected)
+            y_list.append(y)
+            y_labels.append(y_label)
         # two identical labels are appended during 
         # the if/else statements above
         y_label = y_labels[0]
         print(f"{y_label} fetched for y-axis")
 
-        return y_list, y_label
+        return y_list, y_label, idx
 
     def get_first_available(self, y_part, bDetected_part):
         if bDetected_part[0] == True:
@@ -685,9 +738,18 @@ class Plotting(Screen):
         return y
 
     def generate_graph(self):
+        if self.bNoData:
+            print("No datasheet available.")
+            return None
         # try:
         x, xlabel = self.fetch_x()
-        y, y_label = self.fetch_y()
+        y, y_label, idx = self.fetch_y()
+
+        if len(idx) != 1:
+            x = x[idx]
+            for i in range(0, len(y)):
+                y_row = y[i]
+                y[i] = y_row[idx]
 
         if self.axes_selection["x"] == "freq":
             for i, y_arr in enumerate(y):
@@ -697,12 +759,9 @@ class Plotting(Screen):
             x = rfftfreq(nSamples, sample_interval)
             idx_y_unit = y_label.index("[") - 1
             y_label = y_label[:idx_y_unit] + " - Amplitude"
-        
-        now = datetime.now()
-        date_time = now.strftime("%Y_%m_%d-%H_%M_%S.png")
-        output = join(
-            self.result_path, date_time) 
-        pt.main(output,
+
+        output_namepath = self.get_timestamp_namepath()
+        pt.main(output_namepath,
                 x, xlabel, self.x_range,
                 y, y_label, self.y_range,
                 self.eye_selection,
@@ -712,7 +771,7 @@ class Plotting(Screen):
                 self.custom_colors,
                 self.graph_title,
                 self.axes_selection["x"])
-        self.graph_file = output
+        self.graph_file = output_namepath
         # except:
         #     print("ERROR: invalid configuration(s).")
 
@@ -941,9 +1000,11 @@ class Plotting(Screen):
             self.c_ax_min_R = self.interpolate(data_frame[:, 19])
             self.c_ax_maj_R = self.interpolate(data_frame[:, 20])
             self.c_ax_ratio_R = self.interpolate(data_frame[:, 21])
+            self.bNoData = False
 
         except:
             print("ERROR: Processing result data not available.")
+            self.bNoData = True
 
 Builder.load_file('zebrafish.kv')
 Builder.load_file('processing.kv')

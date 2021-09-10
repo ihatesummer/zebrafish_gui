@@ -1,10 +1,15 @@
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+from scipy.signal import find_peaks, peak_widths
 
 
 def moving_average(x, w):
-    return np.convolve(x, np.ones(w), 'valid') / w
+    m_avg = np.convolve(x, np.ones(w), 'valid') / w
+    # duplicate the last element
+    # in order to fit the original length
+    m_avg_extended = np.append(m_avg, np.ones(w-1)*m_avg[-1])
+    return m_avg_extended
 
 
 def get_angVel(angle_list, deltaTime):
@@ -24,23 +29,30 @@ c_frame_no = df[:, 0]
 c_time = df[:, 1]
 c_bDetected = df[:, 2]
 c_angle_wrtB_L = df[:, 5]
-c_angVel_wrtB_L = df[:, 7]
 
-for w in [1, 5, 15, 100]:
-    _, ax = plt.subplots()
-    ax.set_xlim(xmin=0, xmax=17)
-    angles = moving_average(c_angle_wrtB_L[:500], w)
-    plt.plot(c_time[:500-w+1], angles)
-    plt.savefig(f"window={w}_angle.png")
+fps = 30
+w = 15
+t = c_time[:1000]
+_, ax = plt.subplots()
+ax.set_xlim(xmin=0, xmax=17)
+angles = moving_average(c_angle_wrtB_L[:1000], w)
+angVels = get_angVel(angles, 1/30)
+plt.plot(t, angVels, '-o', markersize=3)
+peaks, details = find_peaks(-angVels, prominence=15)
+print(t[peaks])
+print(details['prominences'])
 
-    _, ax = plt.subplots()
-    ax.set_xlim(xmin=0, xmax=17)
-    angVels = get_angVel(angles, 1/30)
-    plt.plot(c_time[:500-w+1], angVels)
-    plt.savefig(f"window={w}_angvel.png")
+plt.plot(t[peaks], angVels[peaks], "x")
+plt.show()
 
-    _, ax = plt.subplots()
-    ax.set_xlim(xmin=0, xmax=17)
-    angVels = moving_average(c_angVel_wrtB_L[:500], w)
-    plt.plot(c_time[:500-w+1], angVels)
-    plt.savefig(f"window={w}_angvel_direct.png")
+idx_bNonPeak = np.ones(1000, dtype=bool)  # Initialize as all true
+wl = 0.8
+wr = 0.5
+for i in range (-int(wl*fps), int(wr*fps)):
+    idx_bNonPeak[peaks-i] = False
+_, ax = plt.subplots()
+ax.set_xlim(xmin=0, xmax=17)
+print(idx_bNonPeak)
+plt.plot(t[idx_bNonPeak], angVels[idx_bNonPeak])
+plt.show()
+plt.savefig(f"window={w}_angvel_direct.png")

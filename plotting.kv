@@ -245,7 +245,7 @@
                             BoxLayout:
                                 orientation: 'horizontal'
                                 Label:
-                                    text: "Angle [deg.]"
+                                    text: "Angle"
                                     size_hint_x: 0.4
                                     background_color: (0,0,0,1)
                                 CheckBox:
@@ -256,7 +256,7 @@
                                     disabled: False
                                     on_active: root.update_axes_selection(self, self.active, "y", "angle")
                                 Label:
-                                    text: "Angle Vel. [deg./s]"
+                                    text: "Angle Velocity"
                                     size_hint_x: 0.4
                                     background_color: (0,0,0,1)
                                 CheckBox:
@@ -272,15 +272,49 @@
                             BoxLayout:
                                 orientation: 'horizontal'  
                                 Label:
-                                    text: "SPV"
-                                    size_hint_x: 0.4
+                                    text: "SPV, with Prominence: "
+                                    size_hint_x: 0.35
                                     background_color: (0,0,0,1)
+                                TextInput:
+                                    id: prominence
+                                    text: "10"
+                                    size_hint_x: 0.1
+                                    multiline: False
+                                    on_text: root.set_peak_prominence()
+                                Button:
+                                    text: "Test"
+                                    size_hint_x: 0.1
+                                    background_color: (1, 1, 1, 1)
+                                    multiline: False
+                                    on_press: root.show_peaks()
+                                Label:
+                                    text: "Margins: "
+                                    size_hint_x: 0.2
+                                    background_color: (0,0,0,1)
+                                TextInput:
+                                    id: peak_margin_l
+                                    text: "0.5"
+                                    size_hint_x: 0.1
+                                    multiline: False
+                                    on_text: root.set_peak_margins("left")
+                                TextInput:
+                                    id: peak_margin_r
+                                    text: "0.5"
+                                    size_hint_x: 0.1
+                                    multiline: False
+                                    on_text: root.set_peak_margins("right")
                                 CheckBox:
                                     group: "y-axis choice"
                                     size_hint_x: 0.1
                                     id: y_ax_SPV
                                     disabled: False
                                     on_active: root.update_axes_selection(self, self.active, "y", "spv")
+                            Label:
+                                text: ""
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            BoxLayout:
+                                orientation: 'horizontal'
                                 Label:
                                     text: "Beats"
                                     size_hint_x: 0.4
@@ -290,13 +324,7 @@
                                     size_hint_x: 0.1
                                     id: y_ax_beats
                                     disabled: False
-                                    on_active: root.update_axes_selection(self, self.active, "y", "beats")
-                            Label:
-                                text: ""
-                                size_hint_x: None
-                                width: self.parent.width * 0.15
-                            BoxLayout:
-                                orientation: 'horizontal' 
+                                    on_active: root.update_axes_selection(self, self.active, "y", "beats") 
                                 Label:
                                     text: "Saccade Frequency"
                                     size_hint_x: 0.4
@@ -306,11 +334,7 @@
                                     size_hint_x: 0.1
                                     id: y_ax_saccfreq
                                     disabled: False
-                                    on_active: root.update_axes_selection(self, self.active, "y", "sacccfreq")
-                                Label:
-                                    text: ""
-                                    size_hint_x: 0.5
-                                    background_color: (0,0,0,1)
+                                    on_active: root.update_axes_selection(self, self.active, "y", "sacc_freq")
                             Label:
                                 text: ""
                                 size_hint_x: None
