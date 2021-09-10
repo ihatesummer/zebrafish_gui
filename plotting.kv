@@ -46,24 +46,13 @@
                         font_size: 25
                         background_color: (1, 1, 1, 1)
                         on_press: filechooser._update_files()
-                BoxLayout:
-                    orientation: "horizontal"
-                    size_hint: 1, None
+                Label:
+                    id: vid_selected
+                    size_hint: 0.85, None
                     height: 30
-                    Label:
-                        id: vid_selected
-                        size_hint: 0.85, 1
-                        font_size: 20
-                        markup: True
-                        text: "Select a video from above ..."
-                    Label:
-                        text: "FPS: "
-                        size_hint: 0.075, 1
-                    TextInput:
-                        id: fps
-                        multiline: False
-                        size_hint: 0.075, 1
-                        on_text: root.set_fps()
+                    font_size: 20
+                    markup: True
+                    text: "Select a video from above ..."
                 Image:
                     id: preview_graph
                     size_hint: 1, None

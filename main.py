@@ -13,6 +13,7 @@ from numpy import (abs, append, vstack,
                    convolve, count_nonzero,
                    linspace, loadtxt,
                    mean, ones, savetxt)
+from numpy.core.fromnumeric import nonzero
 from scipy.fft import rfft, rfftfreq
 from datetime import datetime
 from decord import VideoReader, cpu, gpu
@@ -297,12 +298,12 @@ class Processing(Screen):
             out_angle_B,
             out_angle_L,
             out_angle_R,
-            out_area_L,
-            out_area_R,
-            out_ax_min_L,
-            out_ax_maj_L,
-            out_ax_min_R,
-            out_ax_maj_R) = d.alloc_result_space(
+            area_L,
+            area_R,
+            ax_min_L,
+            ax_maj_L,
+            ax_min_R,
+            ax_maj_R) = d.alloc_result_space(
                 self.nFrames)
             for i, file in enumerate(file_list):
                 out_frame_no[i] = d.get_frame_no(file)
@@ -315,12 +316,12 @@ class Processing(Screen):
                     out_angle_B[i],
                     out_angle_L[i],
                     out_angle_R[i],
-                    out_area_L[i],
-                    out_area_R[i],
-                    out_ax_min_L[i],
-                    out_ax_maj_L[i],
-                    out_ax_min_R[i],
-                    out_ax_maj_R[i]) = d.main(
+                    area_L[i],
+                    area_R[i],
+                    ax_min_L[i],
+                    ax_maj_L[i],
+                    ax_min_R[i],
+                    ax_maj_R[i]) = d.main(
                         self.crop_ratio,
                         self.brt_bounds_eye,
                         self.len_bounds_eye,
@@ -338,12 +339,12 @@ class Processing(Screen):
                      out_angle_B[i],
                      out_angle_L[i],
                      out_angle_R[i],
-                     out_area_L[i],
-                     out_area_R[i],
-                     out_ax_min_L[i],
-                     out_ax_maj_L[i],
-                     out_ax_min_R[i],
-                     out_ax_maj_R[i]) = (False, 0,
+                     area_L[i],
+                     area_R[i],
+                     ax_min_L[i],
+                     ax_maj_L[i],
+                     ax_min_R[i],
+                     ax_maj_R[i]) = (False, 0,
                                          0, 0, 0, 0,
                                          0, 0, 0, 0)
                 
@@ -359,12 +360,12 @@ class Processing(Screen):
                 out_angle_B,
                 out_angle_L,
                 out_angle_R,
-                out_area_L,
-                out_area_R,
-                out_ax_min_L,
-                out_ax_maj_L,
-                out_ax_min_R,
-                out_ax_maj_R)
+                area_L,
+                area_R,
+                ax_min_L,
+                ax_maj_L,
+                ax_min_R,
+                ax_maj_R)
             nDetected = count_nonzero(out_bDetected)
             print(f"{self.nFrames - nDetected} out of",
                   f"{self.nFrames} frames failed.")
@@ -397,9 +398,9 @@ class Processing(Screen):
     def save_result(
         self, out_bDetected, out_frame_no,
         out_angle_B,out_angle_L, out_angle_R,
-        out_area_L, out_area_R,
-        out_ax_min_L, out_ax_maj_L,
-        out_ax_min_R, out_ax_maj_R):
+        area_L, area_R,
+        ax_min_L, ax_maj_L,
+        ax_min_R, ax_maj_R):
         out_time = out_frame_no/self.fps
         out_angle_wrtB_L = out_angle_L - out_angle_B
         out_angle_wrtB_R = out_angle_R - out_angle_B
@@ -410,31 +411,23 @@ class Processing(Screen):
         # and neg. value is to the left
         out_angle_wrtB_L *= -1
         out_angle_wrtB_R *= -1
-        out_angVel_L = self.get_angVel(out_angle_L, 1/self.fps)
-        out_angVel_R = self.get_angVel(out_angle_R, 1/self.fps)
-        out_angVel_wrtB_L = self.get_angVel(out_angle_wrtB_L, 1/self.fps)
-        out_angVel_wrtB_R = self.get_angVel(out_angle_wrtB_R, 1/self.fps)
-        out_area_norm_L = self.normalize_area(out_area_L)
-        out_area_norm_R = self.normalize_area(out_area_R)
-        out_axes_ratio_L = out_ax_maj_L/out_ax_min_L
-        out_axes_ratio_R = out_ax_maj_R/out_ax_min_R
+        out_area_norm_L = self.normalize_area(area_L)
+        out_area_norm_R = self.normalize_area(area_R)
+        out_axes_ratio_L = ax_maj_L/ax_min_L
+        out_axes_ratio_R = ax_maj_R/ax_min_R
 
         detection_log = vstack(
-            (out_frame_no, out_time, out_bDetected, out_angle_B,
+            (out_frame_no, out_time,
+             out_bDetected, out_angle_B,
              out_angle_L, out_angle_wrtB_L,
-             out_angVel_L, out_angVel_wrtB_L,
              out_angle_R, out_angle_wrtB_R,
-             out_angVel_R, out_angVel_wrtB_R,
-             out_area_L, out_area_R,
              out_area_norm_L, out_area_norm_R,
-             out_ax_min_L, out_ax_maj_L, out_axes_ratio_L,
-             out_ax_min_R, out_ax_maj_R, out_axes_ratio_R)).T
+             out_axes_ratio_L, out_axes_ratio_R)).T
         header = "frame_no,time,bDetected,angle_B," + \
-            "angle_L,angle_wrtB_L,angVel_L,angVel_wrtB_L," + \
-            "angle_R,angle_wrtB_R,angVel_R,angVel_wrtB_R," + \
-            "area_L,area_R,area_norm_L,area_norm_R," + \
-            "ax_min_L,ax_maj_L,ax_ratio_L," + \
-            "ax_min_R,ax_maj_R,ax_ratio_R"
+            "angle_L,angle_wrtB_L," + \
+            "angle_R,angle_wrtB_R," + \
+            "area_norm_L,area_norm_R," + \
+            "ax_ratio_L,ax_ratio_R"
         savetxt(join(self.save_path, "result.csv"),
                 detection_log, delimiter=',',
                 header=header)
@@ -482,13 +475,9 @@ class Plotting(Screen):
     c_bDetected = None
     c_angle_B = None
     c_angle_L = None
-    c_angle_wrtB_L = None
-    c_angVel_L = None
-    c_angVel_wrtB_L = None
+    c_angle_wrtB_L = nonzero
     c_angle_R = None
     c_angle_wrtB_R = None
-    c_angVel_R = None
-    c_angVel_wrtB_R = None
 
     def set_custom_colors(self):
         self.custom_colors[0] = self.ids.graph_color_left.text
@@ -505,13 +494,6 @@ class Plotting(Screen):
             print("Update - window size: ", self.window_size)
         except:
             print("ERROR: Please enter an integer for window size.")
-
-    def set_fps(self):
-        try:
-            self.fps = int(self.ids.fps.text)
-            print("Update - FPS: ", self.fps)
-        except:
-            print("ERROR: Please enter an integer for FPS.")
 
     def set_peak_prominence(self):
         try:
@@ -584,7 +566,7 @@ class Plotting(Screen):
     def get_slowPhase_idx(self, y):
         peaks, _ = find_peaks(-y,
                               self.peak_prominence,
-                              distance=self.fps/2)
+                              distance=self.fps)
         # Initialize as all True
         idx_slowPhase = ones(len(y), dtype=bool) 
         left_margin = int(self.peak_margins[0]*self.fps)
@@ -647,10 +629,10 @@ class Plotting(Screen):
     def fetch_x(self):
         if self.axes_selection["x"] == "frame":
             x = self.c_frame_no
-            xlabel = "frame"
+            xlabel = "Frame"
         elif self.axes_selection["x"] == "time":
             x = self.c_time
-            xlabel = "time [sec]"
+            xlabel = "Time [sec]"
         elif self.axes_selection["x"] == "freq":
             x = None
             xlabel = "Frequency [Hz]"
@@ -949,18 +931,6 @@ class Plotting(Screen):
             f"[color=aaff00]{self.vid_name}[/color] selected."
         self.data_file = join(self.result_path, "result.csv")
 
-        specific_setting = join(self.result_path, "settings.json")
-        if exists(specific_setting):
-            settings = specific_setting
-            print(f"Specific FPS loaded.")
-        else:
-            settings = "default_settings.json"
-            print(f"Default FPS loaded.")
-        with open(settings) as load_settings:
-            loaded = load(load_settings)
-            self.fps = loaded['fps']
-        self.ids.fps.text = str(self.fps)
-
         default_graph = join(
             self.result_path, ".blank.png")
         if not exists(default_graph):
@@ -984,26 +954,18 @@ class Plotting(Screen):
             self.c_angle_B = self.interpolate(data_frame[:, 3])
             self.c_angle_L = self.interpolate(data_frame[:, 4])
             self.c_angle_wrtB_L = self.interpolate(data_frame[:, 5])
-            self.c_angVel_L = self.interpolate(data_frame[:, 6])
-            self.c_angVel_wrtB_L = self.interpolate(data_frame[:, 7])
-            self.c_angle_R = self.interpolate(data_frame[:, 8])
-            self.c_angle_wrtB_R = self.interpolate(data_frame[:, 9])
-            self.c_angVel_R = self.interpolate(data_frame[:, 10])
-            self.c_angVel_wrtB_R = self.interpolate(data_frame[:, 11])
-            self.c_area_L = self.interpolate(data_frame[:, 12])
-            self.c_area_R = self.interpolate(data_frame[:, 13])
-            self.c_area_norm_L = self.interpolate(data_frame[:, 14])
-            self.c_area_norm_R = self.interpolate(data_frame[:, 15])
-            self.c_ax_min_L = self.interpolate(data_frame[:, 16])
-            self.c_ax_maj_L = self.interpolate(data_frame[:, 17])
-            self.c_ax_ratio_L = self.interpolate(data_frame[:, 18])
-            self.c_ax_min_R = self.interpolate(data_frame[:, 19])
-            self.c_ax_maj_R = self.interpolate(data_frame[:, 20])
-            self.c_ax_ratio_R = self.interpolate(data_frame[:, 21])
+            self.c_angle_R = self.interpolate(data_frame[:, 6])
+            self.c_angle_wrtB_R = self.interpolate(data_frame[:, 7])
+            self.c_area_norm_L = self.interpolate(data_frame[:, 8])
+            self.c_area_norm_R = self.interpolate(data_frame[:, 9])
+            self.c_ax_ratio_L = self.interpolate(data_frame[:, 10])
+            self.c_ax_ratio_R = self.interpolate(data_frame[:, 11])
+            self.fps = 1 / (self.c_time[1] - self.c_time[0])
             self.bNoData = False
+            print(f"{self.vid_name} [{int(self.fps)}FPS] data loaded.")
 
         except:
-            print("ERROR: Processing result data not available.")
+            print(f"ERROR: Processing result is not available for {self.vid_name}.")
             self.bNoData = True
 
 Builder.load_file('zebrafish.kv')

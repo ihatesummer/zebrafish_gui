@@ -32,7 +32,7 @@ def peak_preview(output, x, x_label, x_range,
                     color=custom_colors[i],
                     label=custom_eye_label[i],
                     linewidth=1)
-            peaks, _ = find_peaks(-y_arr, peak_prominence, distance=fps/2)
+            peaks, _ = find_peaks(-y_arr, peak_prominence, distance=fps)
             ax.legend(loc="upper right")
             ax.plot(x[peaks], y_arr[peaks], "x", markersize=10, color=custom_colors[i])
             print(f"Peak occurrences: {x[peaks]} second")
@@ -45,7 +45,7 @@ def peak_preview(output, x, x_label, x_range,
         ax.plot(x, y,
                 color=my_color,
                 linewidth=1)
-        peaks, _ = find_peaks(-y, peak_prominence, distance=fps/2)
+        peaks, _ = find_peaks(-y, peak_prominence, distance=fps)
         ax.legend(loc="upper right")
         ax.plot(x[peaks], y[peaks], "x", markersize=10, color=my_color)
         print(f"Peak occurrences: {x[peaks]} second")
