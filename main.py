@@ -12,7 +12,7 @@ from matplotlib.pyplot import yscale
 from numpy import (abs, append, vstack,
                    convolve, count_nonzero,
                    linspace, loadtxt,
-                   mean, ones, savetxt)
+                   mean, ones, roll, savetxt)
 from numpy.core.fromnumeric import nonzero
 from scipy.fft import rfft, rfftfreq
 from datetime import datetime
@@ -563,6 +563,13 @@ class Plotting(Screen):
         angVel_list[0] = angVel_list[1]
         return angVel_list
 
+    def get_nPeak(self, y):
+        peaks, _ = find_peaks(-y,
+                              self.peak_prominence,
+                              distance=self.fps)
+        return len(peaks)
+
+    
     def get_slowPhase_idx(self, y):
         peaks, _ = find_peaks(-y,
                               self.peak_prominence,
@@ -571,8 +578,14 @@ class Plotting(Screen):
         idx_slowPhase = ones(len(y), dtype=bool) 
         left_margin = int(self.peak_margins[0]*self.fps)
         right_margin = int(self.peak_margins[1]*self.fps)
+
         for i in range (-left_margin, right_margin):
-            idx_slowPhase[peaks+i] = False
+            try:
+                idx_slowPhase[peaks+i] = False
+            except:
+                # 1. first peak may be too close to index zero
+                # 2. last peak may be too close to the last index
+                pass
         return idx_slowPhase
 
     def preprocess_angles(self, angle):
@@ -584,20 +597,33 @@ class Plotting(Screen):
     def choose_angle_data(self, angle, angVel, y_selected):
         if y_selected == "angle":
             y = angle
-            y_label = "angle [degree]"
+            y_label = "Angle [degree]"
             idx = [None]
         elif y_selected == "angVel":
             y = angVel
-            y_label = "angular velocity [degree/sec]"
+            y_label = "Angular velocity [degree/sec]"
             idx = [None]
         elif y_selected == "spv":
             y = angVel
             y_label = "Slow phase velocity [degree/sec]"
             idx = self.get_slowPhase_idx(angVel)
         elif y_selected == "beats":
-            pass
+            y = angVel
+            y_label = ""
+            idx = [None]
         elif y_selected == "sacc_freq":
-            pass
+            peak_frames, _ = find_peaks(
+                -angVel,
+                self.peak_prominence,
+                distance=self.fps)
+            peak_times = self.c_time[peak_frames]
+            shifted = roll(self.c_time[peak_frames], 1)
+            shifted[0] = 0
+            sacc_freq = 1 / (peak_times - shifted)
+
+            y = sacc_freq
+            y_label = "Saccade frequency [Hz]"
+            idx = peak_frames
         else:
             return None
         return y, y_label, idx
@@ -644,6 +670,7 @@ class Plotting(Screen):
     def fetch_y(self):
         y_list = []
         y_labels = []
+        idx_list = []
         y_selected = self.axes_selection["y"]
         if "left" in self.eye_selection:
             left_eyeData_collection = (
@@ -657,6 +684,7 @@ class Plotting(Screen):
                 y_selected)
             y_list.append(y)
             y_labels.append(y_label)
+            idx_list.append(idx)
             
         if "right" in self.eye_selection:
             right_eyeData_collection = (
@@ -670,12 +698,13 @@ class Plotting(Screen):
                 y_selected)
             y_list.append(y)
             y_labels.append(y_label)
+            idx_list.append(idx)
         # two identical labels are appended during 
         # the if/else statements above
         y_label = y_labels[0]
         print(f"{y_label} fetched for y-axis")
 
-        return y_list, y_label, idx
+        return y_list, y_label, idx_list
 
     def get_first_available(self, y_part, bDetected_part):
         if bDetected_part[0] == True:
@@ -719,43 +748,83 @@ class Plotting(Screen):
                 pass
         return y
 
+    def get_bpm(self, angVel):
+        # bpm: beats per minute
+        nPeak = self.get_nPeak(angVel)
+        TimeDuration_sec = len(angVel) / self.fps
+        TimeDuration_min = TimeDuration_sec / 60
+        bpm = nPeak/TimeDuration_min
+        return bpm
+
     def generate_graph(self):
         if self.bNoData:
             print("No datasheet available.")
             return None
-        # try:
-        x, xlabel = self.fetch_x()
-        y, y_label, idx = self.fetch_y()
-
-        if len(idx) != 1:
-            x = x[idx]
-            for i in range(0, len(y)):
-                y_row = y[i]
-                y[i] = y_row[idx]
-
-        if self.axes_selection["x"] == "freq":
-            for i, y_arr in enumerate(y):
-                y[i] = abs(rfft(y_arr))
-            nSamples = int(max(self.c_frame_no))
-            sample_interval = self.c_time[1]
-            x = rfftfreq(nSamples, sample_interval)
-            idx_y_unit = y_label.index("[") - 1
-            y_label = y_label[:idx_y_unit] + " - Amplitude"
-
         output_namepath = self.get_timestamp_namepath()
-        pt.main(output_namepath,
-                x, xlabel, self.x_range,
-                y, y_label, self.y_range,
-                self.eye_selection,
-                self.custom_grid,
-                self.custom_label,
-                self.custom_eye_label,
-                self.custom_colors,
-                self.graph_title,
-                self.axes_selection["x"])
-        self.graph_file = output_namepath
-        # except:
-        #     print("ERROR: invalid configuration(s).")
+
+        try:
+            x, xlabel = self.fetch_x()
+            y, y_label, idx = self.fetch_y()
+
+            if self.axes_selection["y"] == "spv":
+                pt.show_spv(output_namepath,
+                            self.c_time, xlabel, self.x_range,
+                            y, y_label, self.y_range,
+                            self.eye_selection,
+                            self.custom_grid,
+                            self.custom_label,
+                            self.custom_eye_label,
+                            self.custom_colors,
+                            self.graph_title, idx)
+                self.graph_file = output_namepath
+                return None
+
+            if self.axes_selection["y"] == "beats":
+                bpms = []
+                for y_arr in y:
+                    bpm = self.get_bpm(y_arr)
+                    bpms.append(bpm)
+                pt.show_bpm(output_namepath, bpms, self.eye_selection)
+                self.graph_file = output_namepath
+                return None
+            
+            if self.axes_selection["y"] == "sacc_freq":
+                pt.show_sacc_freq(output_namepath,
+                            self.c_time, xlabel, self.x_range,
+                            y, y_label, self.y_range,
+                            self.eye_selection,
+                            self.custom_grid,
+                            self.custom_label,
+                            self.custom_eye_label,
+                            self.custom_colors,
+                            self.graph_title, idx)
+                self.graph_file = output_namepath
+                return None         
+
+            if self.axes_selection["x"] == "freq":
+                for i, y_arr in enumerate(y):
+                    y[i] = abs(rfft(y_arr))
+                    print(f"y_{i} len: {len(y[i])}")
+                nSamples = len(self.c_time)
+                sample_interval = 1 / self.fps
+                x = rfftfreq(nSamples, sample_interval)
+                print(f"x len: {len(x)}")
+                idx_y_unit = y_label.index("[") - 1
+                y_label = y_label[:idx_y_unit] + " - Amplitude"
+
+            pt.main(output_namepath,
+                    x, xlabel, self.x_range,
+                    y, y_label, self.y_range,
+                    self.eye_selection,
+                    self.custom_grid,
+                    self.custom_label,
+                    self.custom_eye_label,
+                    self.custom_colors,
+                    self.graph_title,
+                    self.axes_selection["x"])
+            self.graph_file = output_namepath
+        except:
+            print("ERROR: invalid configuration(s).")
 
     def update_wrtB(self, instance, value):
         self.wrt_B = value

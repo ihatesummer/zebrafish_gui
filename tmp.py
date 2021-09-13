@@ -2,6 +2,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks, peak_widths
+from scipy.fft import rfft, rfftfreq
 
 
 def moving_average(x, w):
@@ -12,45 +13,25 @@ def moving_average(x, w):
     return m_avg_extended
 
 
-def get_angVel(angle_list, deltaTime):
-    angVel_list = angle_list.copy()
-    for i in range(1, len(angVel_list)):
-        angVel_list[i] = \
-            (angle_list[i] - angle_list[i-1]) / deltaTime
-    angVel_list[0] = angVel_list[1]
-    return angVel_list
-
-
 file = os.path.join(os.getcwd(), r"results\vor.avi\result.csv")
 df = np.loadtxt(file, delimiter=',')
 df = df[df[:, 0].argsort()]
 
-c_time = df[:, 1]
-c_normArea_L = df[:, 8]
-
 fps = 60
 w = 30
-# t = c_time[:1000]
-# _, ax = plt.subplots()
-# ax.set_xlim(xmin=0, xmax=17)
-# angles = moving_average(c_angle_wrtB_L[:1000], w)
-# angVels = get_angVel(angles, 1/30)
-# plt.plot(t, angVels, '-o', markersize=3)
-# peaks, details = find_peaks(-angVels, prominence=15)
-# print(t[peaks])
-# print(details['prominences'])
+c_time = df[:, 1]
+c_normArea_L = moving_average(df[:, 8], w)
 
-# plt.plot(t[peaks], angVels[peaks], "x")
-# plt.show()
+_, ax = plt.subplots()
+plt.plot(c_time, c_normArea_L)
+plt.show()
 
-# idx_bNonPeak = np.ones(1000, dtype=bool)  # Initialize as all true
-# wl = 0.8
-# wr = 0.5
-# for i in range (-int(wl*fps), int(wr*fps)):
-#     idx_bNonPeak[peaks-i] = False
-# _, ax = plt.subplots()
-# ax.set_xlim(xmin=0, xmax=17)
-# print(idx_bNonPeak)
-# plt.plot(t[idx_bNonPeak], angVels[idx_bNonPeak])
-# plt.show()
-# plt.savefig(f"window={w}_angvel_direct.png")
+nSamples = len(c_time)
+sample_interval = 1/fps
+x = rfftfreq(nSamples, sample_interval)
+y = abs(
+    rfft(moving_average(c_normArea_L, w)))
+_, ax = plt.subplots()
+plt.plot(x, y)
+plt.show()
+print(len(x), len(y))

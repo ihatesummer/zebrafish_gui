@@ -90,6 +90,169 @@ def peak_preview(output, x, x_label, x_range,
     plt.savefig(output[:-4]+".pdf")  # pdf
     plt.close('all')
 
+
+def show_spv(output, time, x_label, x_range,
+             y_list, y_label, y_range,
+             lr_selected,
+             custom_grid,
+             custom_label,
+             custom_eye_label,
+             custom_colors,
+             graph_title, idxs):
+    _, ax = plt.subplots()
+
+    if len(y_list) == 2:
+        for i, y_arr in enumerate(y_list):
+            idx = idxs[i]
+            x = time[idx]
+            y = y_arr[idx]
+            ax.plot(x, y,
+                    color=custom_colors[i],
+                    label=custom_eye_label[i],
+                    linewidth=1)
+            ax.legend(loc="upper right")
+    elif len(y_list) == 1:
+        if lr_selected[0] == "left":
+            my_color = custom_colors[0]
+        if lr_selected[0] == "right":
+            my_color = custom_colors[1]
+        idx = idxs[0]
+        x = time[idx]
+        y = y_list[0]
+        y = y[idx]
+        ax.plot(x, y, my_color, linewidth=1)
+
+    else:
+        print("ERROR: Wrong input for y.")
+        pass
+
+    if x_range == [0, 0]:
+        ax.set_xlim(xmin=min(x), xmax=max(x))
+    else:
+        ax.set_xlim(xmin=x_range[0], xmax=x_range[1])
+
+    if y_range == [0, 0]:
+        ax.set_ylim(ymin=min(y_list), ymax=max(y_list))
+    else:
+        ax.set_ylim(ymin=y_range[0], ymax=y_range[1])
+
+    xgrid, ygrid = custom_grid
+    if all(type(g) != ndarray for g in custom_grid):
+        ax.grid()
+    else:
+        if type(xgrid) == ndarray:
+            ax.set_xticks(xgrid)
+            ax.xaxis.grid(True)
+        if type(ygrid) == ndarray:
+            ax.set_yticks(ygrid)
+            ax.yaxis.grid(True)
+
+    if custom_label[0] != "":
+        ax.set_xlabel(custom_label[0])
+    else:
+        ax.set_xlabel(x_label)
+    if custom_label[1] != "":
+        ax.set_ylabel(custom_label[1])
+    else:
+        ax.set_ylabel(y_label)
+
+    if graph_title != "":
+        ax.set_title(graph_title)
+    plt.savefig(output)  # png
+    plt.savefig(output[:-4]+".pdf")  # pdf
+    plt.close('all')
+
+def show_bpm(output, bpms, eye_selection):
+    if len(eye_selection) == 2 and eye_selection[0] == 'right':
+        print('yeah')
+        eye_selection = ['left', 'right']
+    print(eye_selection)
+    _, ax = plt.subplots()
+    pos_x = 0.25
+    pos_y = 0.5
+    for i, bpm in enumerate(bpms):
+        bpm_string = f"Beats ({eye_selection[i]}): {bpm:.4f}" 
+        ax.text(pos_x, pos_y-i/10, bpm_string, fontsize=15)
+    plt.savefig(output)  # png
+    plt.savefig(output[:-4]+".pdf")  # pdf
+    plt.close('all')
+
+
+def show_sacc_freq(output,
+                   time, x_label, x_range,
+                   y_list, y_label, y_range,
+                   lr_selected,
+                   custom_grid,
+                   custom_label,
+                   custom_eye_label,
+                   custom_colors,
+                   graph_title, idxs):
+
+    _, ax = plt.subplots()
+    if len(y_list) == 2:
+        markers = ['o', 's']
+        for i, y in enumerate(y_list):
+            idx = idxs[i]
+            x = time[idx]
+            ax.plot(x, y,
+                    color=custom_colors[i],
+                    label=custom_eye_label[i],
+                    marker = markers[i],
+                    linestyle='None',
+                    alpha = 0.8)
+            ax.legend(loc="upper right")
+    elif len(y_list) == 1:
+        if lr_selected[0] == "left":
+            my_color = custom_colors[0]
+        if lr_selected[0] == "right":
+            my_color = custom_colors[1]
+        idx = idxs[0]
+        x = time[idx]
+        y = y_list[0]
+        ax.plot(x, y, my_color,
+                marker='o',
+                linestyle='None')
+    else:
+        print("ERROR: Wrong input for y.")
+        pass
+
+    if x_range == [0, 0]:
+        ax.set_xlim(0, xmax=max(x)+1)
+    else:
+        ax.set_xlim(xmin=x_range[0], xmax=x_range[1])
+
+    if y_range == [0, 0]:
+        pass
+    else:
+        ax.set_ylim(ymin=y_range[0], ymax=y_range[1])
+
+    xgrid, ygrid = custom_grid
+    if all(type(g) != ndarray for g in custom_grid):
+        ax.grid()
+    else:
+        if type(xgrid) == ndarray:
+            ax.set_xticks(xgrid)
+            ax.xaxis.grid(True)
+        if type(ygrid) == ndarray:
+            ax.set_yticks(ygrid)
+            ax.yaxis.grid(True)
+
+    if custom_label[0] != "":
+        ax.set_xlabel(custom_label[0])
+    else:
+        ax.set_xlabel(x_label)
+    if custom_label[1] != "":
+        ax.set_ylabel(custom_label[1])
+    else:
+        ax.set_ylabel(y_label)
+
+    if graph_title != "":
+        ax.set_title(graph_title)
+    plt.savefig(output)  # png
+    plt.savefig(output[:-4]+".pdf")  # pdf
+    plt.close('all')
+
+
 def main(output, x, x_label, x_range,
          y_list, y_label, y_range,
          lr_selected,
@@ -103,7 +266,7 @@ def main(output, x, x_label, x_range,
     if len(y_list) == 2:
         if xAxis == "freq":
             for i, y_arr in enumerate(y_list):
-                ax.semilogy(x, y_arr,
+                ax.plot(x, y_arr,
                         color=custom_colors[i],
                         label=custom_eye_label[i],
                         linewidth=1)
@@ -121,7 +284,7 @@ def main(output, x, x_label, x_range,
         if lr_selected[0] == "right":
             my_color = custom_colors[1]
         if xAxis == "freq":
-            ax.semilogy(x, y_list[0], my_color, linewidth=1)
+            ax.plot(x, y_list[0], my_color, linewidth=1)
         else:
             ax.plot(x, y_list[0], my_color, linewidth=1)
 
