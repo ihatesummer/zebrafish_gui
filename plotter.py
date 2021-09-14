@@ -1,4 +1,3 @@
-# %%
 import matplotlib.pyplot as plt
 from numpy import max, min, ndarray
 from scipy.signal import find_peaks
