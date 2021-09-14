@@ -18,9 +18,9 @@ df = np.loadtxt(file, delimiter=',')
 df = df[df[:, 0].argsort()]
 
 fps = 60
-w = 30
-c_time = df[:, 1]
-c_normArea_L = moving_average(df[:, 8], w)
+w = 10
+c_time = df[:, 1][6*fps:12*fps]
+c_normArea_L = moving_average(df[:, 8], w)[6*fps:12*fps]
 
 _, ax = plt.subplots()
 plt.plot(c_time, c_normArea_L)

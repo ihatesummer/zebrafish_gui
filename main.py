@@ -18,6 +18,7 @@ from scipy.fft import rfft, rfftfreq
 from datetime import datetime
 from decord import VideoReader, cpu, gpu
 from scipy.signal import find_peaks
+import matplotlib.pyplot as plt
 import threading
 import numpy as np
 import frame_extractor as vfe
@@ -470,6 +471,7 @@ class Plotting(Screen):
     fps = 1
     peak_prominence = 10
     peak_margins = [0.5, 0.5]
+    fft_timeRange = [0, 0]
     c_frame_no = None
     c_time = None
     c_bDetected = None
@@ -479,13 +481,27 @@ class Plotting(Screen):
     c_angle_R = None
     c_angle_wrtB_R = None
 
+    def set_fft_timeRange(self):
+        try:
+            self.fft_timeRange[0] = float(self.ids.fft_timeRange_from.text)
+            self.fft_timeRange[1] = float(self.ids.fft_timeRange_to.text)
+        except:
+            print("ERROR: Please enter float for fft range.")
+        print("Update - fft range: ", self.fft_timeRange)
+
     def set_custom_colors(self):
-        self.custom_colors[0] = self.ids.graph_color_left.text
-        self.custom_colors[1] = self.ids.graph_color_right.text
+        try:
+            self.custom_colors[0] = self.ids.graph_color_left.text
+            self.custom_colors[1] = self.ids.graph_color_right.text
+        except:
+            print("ERROR: Wrong value for color.")
         print("Update - custom colors: ", self.custom_colors)
 
     def set_graph_title(self):
-        self.graph_title = self.ids.graph_title.text
+        try:
+            self.graph_title = self.ids.graph_title.text
+        except:
+            print("ERROR: wrong value for graph title")
         print("Update - graph title: ", self.graph_title)
 
     def set_window_size(self):
@@ -802,13 +818,19 @@ class Plotting(Screen):
                 return None         
 
             if self.axes_selection["x"] == "freq":
+                idx_start = int(
+                    self.fft_timeRange[0]*self.fps)
+                idx_end = int(
+                    self.fft_timeRange[1]*self.fps)
                 for i, y_arr in enumerate(y):
-                    y[i] = abs(rfft(y_arr))
-                    print(f"y_{i} len: {len(y[i])}")
-                nSamples = len(self.c_time)
+                    print(len(y_arr))
+                    y_arr = y_arr[idx_start:idx_end]
+                    print(len(y_arr))
+                    y[i] = abs(rfft(y_arr)) / len(y_arr)
+                nSamples = len(
+                    self.c_time[idx_start:idx_end])
                 sample_interval = 1 / self.fps
                 x = rfftfreq(nSamples, sample_interval)
-                print(f"x len: {len(x)}")
                 idx_y_unit = y_label.index("[") - 1
                 y_label = y_label[:idx_y_unit] + " - Amplitude"
 
@@ -840,9 +862,9 @@ class Plotting(Screen):
     def set_x_range(self, idx):
         try:
             if idx == "from":
-                self.x_range[0] = int(self.ids.x_range_from.text)
+                self.x_range[0] = float(self.ids.x_range_from.text)
             elif idx == "to":
-                self.x_range[1] = int(self.ids.x_range_to.text)
+                self.x_range[1] = float(self.ids.x_range_to.text)
             else:
                 pass
         except:
@@ -854,8 +876,8 @@ class Plotting(Screen):
             if value == True:
                 self.x_range = [0, 0]
             else:
-                self.x_range[0] = int(self.ids.x_range_from.text)
-                self.x_range[1] = int(self.ids.x_range_to.text)
+                self.x_range[0] = float(self.ids.x_range_from.text)
+                self.x_range[1] = float(self.ids.x_range_to.text)
         except:
             print("ERROR: Invalid input for x-axis range.")
         print("Update - x_range: ", self.x_range)
@@ -863,9 +885,9 @@ class Plotting(Screen):
     def set_y_range(self, idx):
         try:
             if idx == "from":
-                self.y_range[0] = int(self.ids.y_range_from.text)
+                self.y_range[0] = float(self.ids.y_range_from.text)
             elif idx == "to":
-                self.y_range[1] = int(self.ids.y_range_to.text)
+                self.y_range[1] = float(self.ids.y_range_to.text)
             else:
                 pass
         except:
@@ -877,8 +899,8 @@ class Plotting(Screen):
             if value == True:
                 self.y_range = [0, 0]
             else:
-                self.y_range[0] = int(self.ids.y_range_from.text)
-                self.y_range[1] = int(self.ids.y_range_to.text)
+                self.y_range[0] = float(self.ids.y_range_from.text)
+                self.y_range[1] = float(self.ids.y_range_to.text)
         except:
             print("ERROR: Invalid input for x-axis range.")
         print("Update - y_range: ", self.y_range)

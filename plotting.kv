@@ -71,7 +71,7 @@
                     BoxLayout:
                         orientation: 'vertical'
                         size_hint_y: None
-                        height: self.parent.height * 0.25
+                        height: self.parent.height * 6/20
                         Label:
                             text: "x-axis"
                             background_color: (0.5, 0.1, 0.1, 1)
@@ -101,13 +101,41 @@
                                     id: x_ax_frame
                                     group: "x-axis choice"
                                     on_active: root.update_axes_selection(self, self.active, "x", "frame")
+                            Label:
+                                text: ""
+                                size_hint_x: None
+                                width: self.parent.width * 0.15
+                            BoxLayout:
+                                orientation: 'horizontal'
                                 Label:
-                                    text: "Frequency [Hz]"
+                                    text: "Frequency [Hz], between"
                                     background_color: (0,0,0,1)
+                                    size_hint_x: 0.4
+                                TextInput:
+                                    id: fft_timeRange_from
+                                    multiline: False
+                                    text: '0'
+                                    on_text: root.set_fft_timeRange()
+                                    size_hint_x: 0.15
+                                Label:
+                                    text: "and"
+                                    background_color: (0,0,0,1)
+                                    size_hint_x: 0.1
+                                TextInput:
+                                    id: fft_timeRange_to
+                                    multiline: False
+                                    text: '0'
+                                    on_text: root.set_fft_timeRange()
+                                    size_hint_x: 0.15
+                                Label:
+                                    text: "sec"
+                                    background_color: (0,0,0,1)
+                                    size_hint_x: 0.1
                                 CheckBox:
                                     id: x_ax_freq
                                     group: "x-axis choice"
                                     on_active: root.update_axes_selection(self, self.active, "x", "freq")
+                                    size_hint_x: 0.1
                             Label:
                                 text: "Range:"
                                 size_hint_x: None
@@ -218,7 +246,7 @@
                     BoxLayout:
                         orientation: 'vertical'
                         size_hint_y: None
-                        height: self.parent.height * 0.4
+                        height: self.parent.height * 8/20
                         Label:
                             text: "y-axis"
                             background_color: (0.5, 0.1, 0.1, 1)
@@ -459,7 +487,7 @@
                     BoxLayout:
                         orientation: 'vertical'
                         size_hint_y: None
-                        height: self.parent.height * 0.25
+                        height: self.parent.height * 5/20
                         Label:
                             text: "General"
                             background_color: (0.5, 0.1, 0.1, 1)
@@ -572,7 +600,7 @@
                     BoxLayout:
                         orientation: 'vertical'
                         size_hint_y: None
-                        height: self.parent.height * 0.1
+                        height: self.parent.height * 1/20
                         Button:
                             text: "Generate"
                             size_hint_x: None
