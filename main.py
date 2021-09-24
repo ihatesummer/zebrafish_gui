@@ -8,18 +8,16 @@ from cv2 import imwrite, cvtColor, COLOR_RGB2BGR
 from os import getcwd, listdir
 from os.path import join, normpath, basename, exists
 from json import dump, load
-from matplotlib.pyplot import yscale
 from numpy import (abs, append, vstack,
                    convolve, count_nonzero,
                    linspace, loadtxt,
                    mean, ones, roll, savetxt)
 from numpy.core.fromnumeric import nonzero
 from scipy.fft import rfft, rfftfreq
+from scipy.signal import welch
 from datetime import datetime
 from decord import VideoReader, cpu, gpu
 from scipy.signal import find_peaks
-import matplotlib.pyplot as plt
-import threading
 import numpy as np
 import frame_extractor as vfe
 import detector as d
@@ -823,14 +821,14 @@ class Plotting(Screen):
                 idx_end = int(
                     self.fft_timeRange[1]*self.fps)
                 for i, y_arr in enumerate(y):
-                    print(len(y_arr))
                     y_arr = y_arr[idx_start:idx_end]
-                    print(len(y_arr))
-                    y[i] = abs(rfft(y_arr)) / len(y_arr)
+                    # y[i] = abs(rfft(y_arr)) / len(y_arr)
+                    _, y[i] = welch(y_arr, self.fps)
                 nSamples = len(
                     self.c_time[idx_start:idx_end])
                 sample_interval = 1 / self.fps
-                x = rfftfreq(nSamples, sample_interval)
+                # x = rfftfreq(nSamples, sample_interval)
+                x, _ = welch(y_arr, self.fps)
                 idx_y_unit = y_label.index("[") - 1
                 y_label = y_label[:idx_y_unit] + " - Amplitude"
 

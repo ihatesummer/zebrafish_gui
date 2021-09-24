@@ -265,7 +265,7 @@ def main(output, x, x_label, x_range,
     if len(y_list) == 2:
         if xAxis == "freq":
             for i, y_arr in enumerate(y_list):
-                ax.plot(x, y_arr,
+                ax.semilogy(x, y_arr,
                         color=custom_colors[i],
                         label=custom_eye_label[i],
                         linewidth=2)
@@ -282,8 +282,14 @@ def main(output, x, x_label, x_range,
             my_color = custom_colors[0]
         if lr_selected[0] == "right":
             my_color = custom_colors[1]
-        ax.plot(x, y_list[0],
-                my_color, linewidth=1)
+        if xAxis == "freq":
+            ax.semilogy(x, y_list[0],
+                    my_color,
+                    linewidth=2)
+            ax.legend(loc="upper right")
+        else:
+            ax.plot(x, y_list[0],
+                    my_color, linewidth=1)
 
     else:
         print("ERROR: Wrong input for y.")
