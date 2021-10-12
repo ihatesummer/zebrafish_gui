@@ -252,6 +252,7 @@ def get_angle(ref_point, measure_point):
 
 
 def main(crop_ratio,
+         bBladderSkip,
          brt_bounds_eye,
          len_bounds_eye,
          brt_bounds_bladder,
@@ -264,23 +265,7 @@ def main(crop_ratio,
          img_output,
          debug):
     """
-    Detects and inscribes angles of eyes and body.
-    :param IMG_PATH: the parent folder of the source
-                     and destination image folders
-    :param brt_bounds_eye: brightness bounds [low, high] of the eyes
-    :param len_bounds_eye: length bounds [low, high] of the eyes
-    :param brt_bounds_bladder: brightness bounds [low, high]
-                               of the bladder
-    :param len_bounds_bladder: length bounds [low, high]
-                               of the bladder
-    :param img_input: original image file name
-    :param img_output: output image file name
-    :param crop_ratio: starting and ending ratios
-                        (left to right for horizontal,
-                        top to bottom for vertical)
-                        of the desired crop
-    :param debug: either (None, "crop", "eye_brt", "eye_cnt",
-                  "eye_hu", "blad_brt", "blad_cnt")
+    Detects and inscribes angles onto the image(s).
     """
     bDetected = True
     font_size = 0.5
@@ -391,73 +376,81 @@ def main(crop_ratio,
             return savename
 
     # Bladder
-    img_bin_brt = get_binary_brightness(img, brt_bounds_bladder)
+    if not bBladderSkip:
+        img_bin_brt = get_binary_brightness(
+            img, brt_bounds_bladder)
     
-    if debug == "blad_brt":
-        # imshow(
-        #     'Binary image <Bladder>',
-        #     img_bin_brt)
-        # waitKey(0)
-        # destroyAllWindows()
-        savename = f"{img_input[:-4]}" + "_bladbrt.png"
-        imwrite(savename, img_bin_brt)
-        return savename
+        if debug == "blad_brt":
+            # imshow(
+            #     'Binary image <Bladder>',
+            #     img_bin_brt)
+            # waitKey(0)
+            # destroyAllWindows()
+            savename = f"{img_input[:-4]}" + "_bladbrt.png"
+            imwrite(savename, img_bin_brt)
+            return savename
 
-    all_cnt_blad = get_contours(img_bin_brt)
-    filtered_cnt_blad = filter_by_length(all_cnt_blad, len_bounds_bladder)
+        all_cnt_blad = get_contours(img_bin_brt)
+        filtered_cnt_blad = filter_by_length(
+            all_cnt_blad, len_bounds_bladder)
 
-    if debug == "blad_cnt":
-        print("Lengths of all contours:")
-        lens = []
-        for contour in all_cnt_blad:
-            lens.append(len(contour))
-        print(lens)
-        tmp_img = img.copy()
-        img_all_contours = drawContours(
-            tmp_img, all_cnt_blad, -1, YELLOW, 3)
-
-        print("Filtering contours with length bounds of ",
-              len_bounds_bladder, "...")
-        print("Lengths of filtered contours:")
-        lens = []
-        for contour in filtered_cnt_blad:
-            lens.append(len(contour))
-        print(lens)
-        img_len_fil_con = drawContours(
-            img_all_contours, filtered_cnt_blad, -1, RED, 2)
-        # imshow('Length-filtered contours <Bladder>', img_len_fil_con)
-        # waitKey(0)
-        # destroyAllWindows()
-        savename = f"{img_input[:-4]}" + "_bladcnt.png"
-        imwrite(savename, img_len_fil_con)
-        return savename
-
-    if len(filtered_cnt_blad) != 1:
-        if len(filtered_cnt_blad) == 0:
-            print(f"ERROR: No bladder detected for {img_input}.")
-            bDetected = False
-            return bDetected, 0, 0, 0
-
-        elif (len(filtered_cnt_blad) > 1):
-            if debug == "blad_cnt":
-                print(f"{len(filtered_cnt_blad)} bladder candidates found.",
-                "Removing false bladder(s)...")
-            filtered_cnt_blad = remove_false_bladder(
-                filtered_cnt_blad, filtered_cnt_eyes)
-    else:
-        filtered_cnt_blad = filtered_cnt_blad[0]
-    if not bDetected:
-        print(f"ERROR: Failed at detecting a bladder for {img_input}")
-        return bDetected, 0, 0, 0
-    else:
         if debug == "blad_cnt":
-            print(f"Bladder successfully detected for {img_input}")
+            print("Lengths of all contours:")
+            lens = []
+            for contour in all_cnt_blad:
+                lens.append(len(contour))
+            print(lens)
             tmp_img = img.copy()
+            img_all_contours = drawContours(
+                tmp_img, all_cnt_blad, -1, YELLOW, 3)
+
+            print("Filtering contours with length bounds of ",
+                len_bounds_bladder, "...")
+            print("Lengths of filtered contours:")
+            lens = []
+            for contour in filtered_cnt_blad:
+                lens.append(len(contour))
+            print(lens)
             img_len_fil_con = drawContours(
-                tmp_img, filtered_cnt_blad, -1, GREEN, 2)
-            imshow(f'Detected bladder for {img_input}', img_len_fil_con)
-            waitKey(0)
-            destroyAllWindows()
+                img_all_contours, filtered_cnt_blad, -1, RED, 2)
+            # imshow('Length-filtered contours <Bladder>', img_len_fil_con)
+            # waitKey(0)
+            # destroyAllWindows()
+            savename = f"{img_input[:-4]}" + "_bladcnt.png"
+            imwrite(savename, img_len_fil_con)
+            return savename
+
+        if len(filtered_cnt_blad) != 1:
+            if len(filtered_cnt_blad) == 0:
+                print(f"ERROR: No bladder detected for {img_input}.")
+                bDetected = False
+                return bDetected, 0, 0, 0
+
+            elif (len(filtered_cnt_blad) > 1):
+                if debug == "blad_cnt":
+                    print(f"{len(filtered_cnt_blad)} bladder candidates found.",
+                    "Removing false bladder(s)...")
+                filtered_cnt_blad = remove_false_bladder(
+                    filtered_cnt_blad, filtered_cnt_eyes)
+        else:
+            filtered_cnt_blad = filtered_cnt_blad[0]
+        if not bDetected:
+            print(f"ERROR: Failed at detecting a bladder for {img_input}")
+            return bDetected, 0, 0, 0
+        else:
+            if debug == "blad_cnt":
+                print(f"Bladder successfully detected for {img_input}")
+                tmp_img = img.copy()
+                img_len_fil_con = drawContours(
+                    tmp_img, filtered_cnt_blad, -1, GREEN, 2)
+                imshow(f'Detected bladder for {img_input}', img_len_fil_con)
+                waitKey(0)
+                destroyAllWindows()
+    else:
+        if debug == "blad_brt" or debug == "blad_cnt":
+            print("ERROR: Bladder detection disabled by configuration.")
+            return img_input
+
     
     inscribed_img = img.copy()
 
@@ -481,38 +474,45 @@ def main(crop_ratio,
         inscribe_major_axis(inscribed_img, xc, yc,
                             d1, d2, angle, BLUE, 1)
     
-    [xc, yc], [d1, d2], _ = fitEllipse(filtered_cnt_blad)
-    bladder_center = (int(xc), int(yc))
-    circle(inscribed_img, bladder_center, 2, BLUE, 3)
+    if not bBladderSkip:
+        [xc, yc], [d1, d2], _ = fitEllipse(filtered_cnt_blad)
+        bladder_center = (int(xc), int(yc))
+        circle(inscribed_img, bladder_center, 2, BLUE, 3)
 
-    point_btwn_eyes = get_midpoint(eye_centers[0], eye_centers[1])
-    circle(inscribed_img, point_btwn_eyes, 2, BLUE, 3)
+        point_btwn_eyes = get_midpoint(eye_centers[0], eye_centers[1])
+        circle(inscribed_img, point_btwn_eyes, 2, BLUE, 3)
 
-    body_angle = get_angle(ref_point=bladder_center,
-                            measure_point=point_btwn_eyes)
+        body_angle = get_angle(ref_point=bladder_center,
+                                measure_point=point_btwn_eyes)
 
-    inscribe_text(
-        inscribed_img,
-        f'{body_angle:.2f} deg',
-        bladder_center,
-        inscription_pos_offset_bladder,
-        font_size, BLUE, font_thickness)
-    line(inscribed_img, point_btwn_eyes, bladder_center, BLUE, 1)
+        inscribe_text(
+            inscribed_img,
+            f'{body_angle:.2f} deg',
+            bladder_center,
+            inscription_pos_offset_bladder,
+            font_size, BLUE, font_thickness)
+        line(inscribed_img, point_btwn_eyes, bladder_center, BLUE, 1)
 
-    angles_eye2blad = [0, 0]
-    for i, eye_center in enumerate(eye_centers):
-        angles_eye2blad[i] = get_angle(
-            ref_point=bladder_center,
-            measure_point=eye_center)
-        # print(f"angle_eye2blad[{i}]: {angles_eye2blad[i]}]")
-    if max(angles_eye2blad) - min(angles_eye2blad) > 180:
-        # Positive x-axis caught between the two eyes.
-        print("positive x-axis caught between the two eyes.")
-        left_eye_idx = argmin(angles_eye2blad)
-        right_eye_idx = argmax(angles_eye2blad)
+        angles_eye2blad = [0, 0]
+        for i, eye_center in enumerate(eye_centers):
+            angles_eye2blad[i] = get_angle(
+                ref_point=bladder_center,
+                measure_point=eye_center)
+            # print(f"angle_eye2blad[{i}]: {angles_eye2blad[i]}]")
+        if max(angles_eye2blad) - min(angles_eye2blad) > 180:
+            # Positive x-axis caught between the two eyes.
+            print("positive x-axis caught between the two eyes.")
+            left_eye_idx = argmin(angles_eye2blad)
+            right_eye_idx = argmax(angles_eye2blad)
+        else:
+            left_eye_idx = argmax(angles_eye2blad)
+            right_eye_idx = argmin(angles_eye2blad)
     else:
-        left_eye_idx = argmax(angles_eye2blad)
-        right_eye_idx = argmin(angles_eye2blad)
+        # Skipping bladder detection
+        body_angle = 0.0
+        left_eye_idx = 0
+        right_eye_idx = 1
+    
     eyeL_angle = eye_angles[left_eye_idx]
     eyeR_angle = eye_angles[right_eye_idx]
     eyeL_area = eye_areas[left_eye_idx]
@@ -521,15 +521,21 @@ def main(crop_ratio,
     eyeR_ax_min = eye_ax_mins[right_eye_idx]
     eyeL_ax_maj = eye_ax_majs[left_eye_idx]
     eyeR_ax_maj = eye_ax_majs[right_eye_idx]
+    if bBladderSkip:
+        angle_inscription_L = eyeL_angle
+        angle_inscription_R = eyeR_angle
+    else:
+        angle_inscription_L = -(eyeL_angle-body_angle)
+        angle_inscription_R = -(eyeR_angle-body_angle)
     inscribe_text(
         inscribed_img,
-        f'{-(eyeL_angle-body_angle):.2f} deg',
+        f'{angle_inscription_L:.2f} deg',
         eye_centers[left_eye_idx],
         inscription_pos_offset_eyeL,
         font_size, BLUE, font_thickness)
     inscribe_text(
         inscribed_img,
-        f'{-(eyeR_angle-body_angle):.2f} deg',
+        f'{angle_inscription_R:.2f} deg',
         eye_centers[right_eye_idx],
         inscription_pos_offset_eyeR,
         font_size, BLUE, font_thickness)

@@ -53,6 +53,7 @@ class Processing(Screen):
     ins_offset_eyeR = [0, 0]
     ins_offset_bladder = [0, 0]
     crop_ratio = [[0, 1], [0, 1]]
+    bBladderSkip = False
 
     settings_names = ["fps",
                       "crop_width",
@@ -69,6 +70,10 @@ class Processing(Screen):
     def refresh_filechooser(self):
         self.ids.filechooser._update_files()
         print("Filechooser refreshed.")
+
+    def update_bladder_skip(self, instance, value):
+        self.bBladderSkip = value
+        print("Update - Bladder Skip: ", self.bBladderSkip)
 
     def set_properties(self, key):
         try:
@@ -322,6 +327,7 @@ class Processing(Screen):
                     ax_min_R[i],
                     ax_maj_R[i]) = d.main(
                         self.crop_ratio,
+                        self.bBladderSkip,
                         self.brt_bounds_eye,
                         self.len_bounds_eye,
                         self.brt_bounds_bladder,
@@ -373,6 +379,7 @@ class Processing(Screen):
             try:
                 savename = d.main(
                     self.crop_ratio,
+                    self.bBladderSkip,
                     self.brt_bounds_eye,
                     self.len_bounds_eye,
                     self.brt_bounds_bladder,
@@ -383,10 +390,10 @@ class Processing(Screen):
                     self.ins_offset_bladder,
                     self.frame,
                     self.frame_processed,
-                    debug)
+                    debug
+                    )
                 self.ids.preview_proc.source = savename
                 self.ids.preview_proc.reload()
-                # self.load_images()
             except:
                 print("ERROR: try adjusting the settings")
 
@@ -396,10 +403,11 @@ class Processing(Screen):
 
     def save_result(
         self, out_bDetected, out_frame_no,
-        out_angle_B,out_angle_L, out_angle_R,
+        out_angle_B, out_angle_L, out_angle_R,
         area_L, area_R,
         ax_min_L, ax_maj_L,
         ax_min_R, ax_maj_R):
+
         out_time = out_frame_no/self.fps
         out_angle_wrtB_L = out_angle_L - out_angle_B
         out_angle_wrtB_R = out_angle_R - out_angle_B
@@ -1067,7 +1075,7 @@ class ZebrafishApp(App):
         return wm_kv
 
 if __name__ == '__main__':
-    Window.size = (1200, 780)
+    Window.size = (1200, 800)
     Window.top = 50
     Window.left = 100
     ZebrafishApp().run()

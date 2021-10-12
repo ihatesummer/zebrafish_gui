@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from numpy import max, min, ndarray
+from numpy import argmax, max, min, ndarray
 from scipy.signal import find_peaks
 
 
@@ -252,6 +252,19 @@ def show_sacc_freq(output,
     plt.close('all')
 
 
+def print_maximum(x, y, x_range):
+    if x_range != [0, 0]:
+        frame_duration = x[1] - x[0]
+        fps = 1/frame_duration
+        idx_low = int(x_range[0] * fps)
+        idx_high = int(x_range[1] * fps)
+        x = x[idx_low:idx_high]
+        y = y[idx_low:idx_high]
+    xmax = x[argmax(y)]
+    ymax = y.max()
+    print(f"Maximum: {ymax:e}, at {xmax:.3f}")
+
+
 def main(output, x, x_label, x_range,
          y_list, y_label, y_range,
          lr_selected,
@@ -270,6 +283,7 @@ def main(output, x, x_label, x_range,
                         label=custom_eye_label[i],
                         linewidth=2)
                 ax.legend(loc="upper right")
+                print_maximum(x, y_arr, x_range)
         else:
             for i, y_arr in enumerate(y_list):
                 ax.plot(x, y_arr,
@@ -287,6 +301,7 @@ def main(output, x, x_label, x_range,
                     my_color,
                     linewidth=2)
             ax.legend(loc="upper right")
+            print_maximum(x, y_list[0], x_range)
         else:
             ax.plot(x, y_list[0],
                     my_color, linewidth=1)
