@@ -1,3 +1,7 @@
+videos/B13WT_1_c1m_30hz_js_5rpm_70mm-1.avi
+videos/B13WT_2_c1m_30hz_js_10rpm_70mm-1.avi
+videos/vor.avi
+
 .vscode/
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,venv,video,images
@@ -219,23 +223,5 @@ cython_debug/
 [Ss]cripts
 pyvenv.cfg
 pip-selfcheck.json
-
-### Video ###
-*.3g2
-*.3gp
-*.asf
-*.asx
-*.avi
-*.flv
-*.mkv
-*.mov
-*.mp4
-*.mpg
-*.ogv
-*.rm
-*.swf
-*.vob
-*.wmv
-*.webm
 
 # End of https://www.toptal.com/developers/gitignore/api/python,venv,video,images

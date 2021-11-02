@@ -1,0 +1,40 @@
+{
+    "fps": 60,
+    "crop_width": [
+        0.3,
+        0.65
+    ],
+    "crop_height": [
+        0.3,
+        1.0
+    ],
+    "Hu_dist_thresh": 0.3,
+    "brt_bounds_eye": [
+        0,
+        120
+    ],
+    "len_bounds_eye": [
+        400,
+        1000
+    ],
+    "brt_bounds_bladder": [
+        0,
+        160
+    ],
+    "len_bounds_bladder": [
+        1500,
+        2600
+    ],
+    "ins_offset_eyeL": [
+        -50,
+        -30
+    ],
+    "ins_offset_eyeR": [
+        -50,
+        -30
+    ],
+    "ins_offset_bladder": [
+        30,
+        0
+    ]
+}

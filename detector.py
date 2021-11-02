@@ -1,4 +1,4 @@
-from cv2 import *
+import cv2
 from numpy import (
     delete, array, argmax, argmin, append)
 from numpy import degrees, arctan2
@@ -54,8 +54,8 @@ def get_binary_brightness(img, bound):
                   (0=darkest, 255=brightest)
                   [int, int]
     """
-    gray = cvtColor(img, COLOR_BGR2GRAY)
-    black_or_white = inRange(gray, bound[0], bound[1])
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    black_or_white = cv2.inRange(gray, bound[0], bound[1])
     return black_or_white
 
 
@@ -64,10 +64,10 @@ def get_contours(img_bin_brt):
     Get all contours within the length bound.
     :param img_bin_brt: black-and-white image 
     """
-    all_contours, _ = findContours(
+    all_contours, _ = cv2.findContours(
         img_bin_brt,
-        mode=RETR_EXTERNAL,
-        method=CHAIN_APPROX_NONE)
+        mode=cv2.RETR_EXTERNAL,
+        method=cv2.CHAIN_APPROX_NONE)
 
     return all_contours
 
@@ -101,8 +101,8 @@ def remove_non_eyes(eyes, diff_thresh, debug):
         diff_list = []
         for j in range(len(eyes)):
             if i != j:
-                shape_diff = matchShapes(
-                    eyes[i], eyes[j], CONTOURS_MATCH_I1, 0)
+                shape_diff = cv2.matchShapes(
+                    eyes[i], eyes[j], cv2.CONTOURS_MATCH_I1, 0)
                 diff_list.append(shape_diff)
                 if debug != None:
                     print(f"Hu distance of contours ({i, j}): {shape_diff}")
@@ -138,7 +138,7 @@ def inscribe_major_axis(result, xc, yc,
     ytop = yc + sin(radians(angle))*rmajor
     xbot = xc + cos(radians(angle))*rmajor
     ybot = yc - sin(radians(angle))*rmajor
-    line(result, (int(xtop), int(ytop)),
+    cv2.line(result, (int(xtop), int(ytop)),
          (int(xbot), int(ybot)), color, thickness)
 
 
@@ -148,9 +148,9 @@ def inscribe_text(result, text, center,
     xc, yc = center
     offset_x, offset_y = pos_offset
     org = (int(xc+offset_x), int(yc+offset_y))  # bottom-left corner of text
-    result = putText(result, text, org,
-                     FONT_HERSHEY_SIMPLEX, fontsize,
-                     color, thickness, LINE_AA)
+    result = cv2.putText(result, text, org,
+                     cv2.FONT_HERSHEY_SIMPLEX, fontsize,
+                     color, thickness, cv2.LINE_AA)
 
 
 def remove_false_bladder(bladders, eyes):
@@ -166,13 +166,13 @@ def remove_false_bladder(bladders, eyes):
     """
     eye_centers = []
     for eye in eyes:
-        eye_center, _, _ = fitEllipse(eye)
+        eye_center, _, _ = cv2.cv2.fitEllipse(eye)
         eye_centers.append(array(eye_center))
     eyes_midpoint = get_midpoint(eye_centers[0], eye_centers[1])
 
     bladder_to_eye_distances = []
     for bladder in bladders:
-        bladder_center, _, _ = fitEllipse(bladder)
+        bladder_center, _, _ = cv2.cv2.fitEllipse(bladder)
         dist = norm(
             array(bladder_center)-array(eyes_midpoint),
             ord=2)
@@ -212,16 +212,16 @@ def main(crop_ratio,
     bDetected = True
     font_size = 0.5
     font_thickness = 1
-    img = imread(img_input)
+    img = cv2.imread(img_input)
 
     crop_hor, crop_vert = crop_ratio
     img = crop_image(img, crop_hor, crop_vert)
     if debug == "crop":
-        # imshow('Cropped image', img)
-        # waitKey(0)
-        # destroyAllWindows()
+        # cv2.imshow('Cropped image', img)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
         savename = f"{img_input[:-4]}" + "_cropped.png"
-        imwrite(savename, img)
+        cv2.cv2.imwrite(savename, img)
         return savename
     
     # Eyes
@@ -229,13 +229,13 @@ def main(crop_ratio,
     
     if debug == "eye_brt":
         savename = f"{img_input[:-4]}" + "_eyebrt.png"
-        imwrite(savename, img_bin_brt)
+        cv2.cv2.imwrite(savename, img_bin_brt)
         return savename
-        # imshow(
+        # cv2.imshow(
         #     'Binary image <Eyes>',
         #     img_bin_brt)
-        # waitKey(0)
-        # destroyAllWindows()
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
     all_cnt_eyes = get_contours(img_bin_brt)
     filtered_cnt_eyes = filter_by_length(
@@ -247,7 +247,7 @@ def main(crop_ratio,
             lens.append(len(contour))
         print(lens)
         tmp_img = img.copy()
-        img_all_contours = drawContours(
+        img_all_contours = cv2.cv2.drawContours(
             tmp_img, all_cnt_eyes, -1, YELLOW, 3)
 
         print("Filtering contours with length bounds of ",
@@ -257,13 +257,13 @@ def main(crop_ratio,
         for contour in filtered_cnt_eyes:
             lens.append(len(contour))
         print(lens)
-        img_len_fil_con = drawContours(
+        img_len_fil_con = cv2.drawContours(
             img_all_contours, filtered_cnt_eyes, -1, RED, 2)
-        # imshow('Length-filtered contours <Eyes>', img_len_fil_con)
-        # waitKey(0)
-        # destroyAllWindows()
+        # cv2.imshow('Length-filtered contours <Eyes>', img_len_fil_con)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
         savename = f"{img_input[:-4]}" + "_eyecnt.png"
-        imwrite(savename, img_len_fil_con)
+        cv2.imwrite(savename, img_len_fil_con)
         return savename
     
     '''
@@ -308,13 +308,13 @@ def main(crop_ratio,
         if debug == "eye_hu":
             print(f"2 eyes successfully detected for {img_input}")
             tmp_img = img.copy()
-            img_len_fil_con = drawContours(
+            img_len_fil_con = cv2.drawContours(
                 tmp_img, filtered_cnt_eyes, -1, GREEN, 2)
-            # imshow(f'Detected eyes for {img_input}', img_len_fil_con)
-            # waitKey(0)
-            # destroyAllWindows()
+            # cv2.imshow(f'Detected eyes for {img_input}', img_len_fil_con)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
             savename = f"{img_input[:-4]}" + "_eyeresult.png"
-            imwrite(savename, img_len_fil_con)
+            cv2.imwrite(savename, img_len_fil_con)
             return savename
 
     # Bladder
@@ -323,13 +323,13 @@ def main(crop_ratio,
             img, brt_bounds_bladder)
     
         if debug == "blad_brt":
-            # imshow(
+            # cv2.imshow(
             #     'Binary image <Bladder>',
             #     img_bin_brt)
-            # waitKey(0)
-            # destroyAllWindows()
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
             savename = f"{img_input[:-4]}" + "_bladbrt.png"
-            imwrite(savename, img_bin_brt)
+            cv2.imwrite(savename, img_bin_brt)
             return savename
 
         all_cnt_blad = get_contours(img_bin_brt)
@@ -343,23 +343,22 @@ def main(crop_ratio,
                 lens.append(len(contour))
             print(lens)
             tmp_img = img.copy()
-            img_all_contours = drawContours(
+            img_all_contours = cv2.drawContours(
                 tmp_img, all_cnt_blad, -1, YELLOW, 3)
 
             print("Filtering contours with length bounds of ",
                 len_bounds_bladder, "...")
-            print("Lengths of filtered contours:")
             lens = []
             for contour in filtered_cnt_blad:
                 lens.append(len(contour))
-            print(lens)
-            img_len_fil_con = drawContours(
+            print(f"Lengths of filtered contours: {lens}")
+            img_len_fil_con = cv2.drawContours(
                 img_all_contours, filtered_cnt_blad, -1, RED, 2)
-            # imshow('Length-filtered contours <Bladder>', img_len_fil_con)
-            # waitKey(0)
-            # destroyAllWindows()
+            # cv2.imshow('Length-filtered contours <Bladder>', img_len_fil_con)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
             savename = f"{img_input[:-4]}" + "_bladcnt.png"
-            imwrite(savename, img_len_fil_con)
+            cv2.imwrite(savename, img_len_fil_con)
             return savename
 
         if len(filtered_cnt_blad) != 1:
@@ -383,11 +382,11 @@ def main(crop_ratio,
             if debug == "blad_cnt":
                 print(f"Bladder successfully detected for {img_input}")
                 tmp_img = img.copy()
-                img_len_fil_con = drawContours(
+                img_len_fil_con = cv2.drawContours(
                     tmp_img, filtered_cnt_blad, -1, GREEN, 2)
-                imshow(f'Detected bladder for {img_input}', img_len_fil_con)
-                waitKey(0)
-                destroyAllWindows()
+                # cv2.cv2.imshow(f'Detected bladder for {img_input}', img_len_fil_con)
+                # cv2.cv2.waitKey(0)
+                # cv2.cv2.destroyAllWindows()
     else:
         if debug == "blad_brt" or debug == "blad_cnt":
             print("ERROR: Bladder detection disabled by configuration.")
@@ -402,27 +401,27 @@ def main(crop_ratio,
     eye_ax_mins = []
     eye_ax_majs = []
     for eye in filtered_cnt_eyes:
-        my_ellipse = fitEllipse(eye)
+        my_ellipse = cv2.fitEllipse(eye)
         [xc, yc], [d1, d2], min_ax_angle = my_ellipse
         angle = correct_angle(min_ax_angle)
         eye_centers.append([xc, yc])
         eye_angles.append(angle)
-        eye_areas.append(contourArea(eye))
+        eye_areas.append(cv2.contourArea(eye))
         eye_ax_mins.append(d1)
         eye_ax_majs.append(d2)
-        ellipse(inscribed_img, my_ellipse, BLUE, 2)
-        circle(inscribed_img, (int(xc), int(yc)),
+        cv2.ellipse(inscribed_img, my_ellipse, BLUE, 2)
+        cv2.circle(inscribed_img, (int(xc), int(yc)),
             2, BLUE, 3)
         inscribe_major_axis(inscribed_img, xc, yc,
                             d1, d2, angle, BLUE, 1)
     
     if not bBladderSkip:
-        [xc, yc], [d1, d2], _ = fitEllipse(filtered_cnt_blad)
+        [xc, yc], [d1, d2], _ = cv2.fitEllipse(filtered_cnt_blad)
         bladder_center = (int(xc), int(yc))
-        circle(inscribed_img, bladder_center, 2, BLUE, 3)
+        cv2.circle(inscribed_img, bladder_center, 2, BLUE, 3)
 
         point_btwn_eyes = get_midpoint(eye_centers[0], eye_centers[1])
-        circle(inscribed_img, point_btwn_eyes, 2, BLUE, 3)
+        cv2.circle(inscribed_img, point_btwn_eyes, 2, BLUE, 3)
 
         body_angle = get_angle(ref_point=bladder_center,
                                 measure_point=point_btwn_eyes)
@@ -433,7 +432,7 @@ def main(crop_ratio,
             bladder_center,
             inscription_pos_offset_bladder,
             font_size, BLUE, font_thickness)
-        line(inscribed_img, point_btwn_eyes, bladder_center, BLUE, 1)
+        cv2.line(inscribed_img, point_btwn_eyes, bladder_center, BLUE, 1)
 
         angles_eye2blad = [0, 0]
         for i, eye_center in enumerate(eye_centers):
@@ -499,13 +498,13 @@ def main(crop_ratio,
         font_size, GREEN, font_thickness)
 
     if debug == "all":
-        # imshow("fish_eyes", inscribed_img)
-        # waitKey(0)
-        # destroyAllWindows()
-        imwrite(img_output, inscribed_img)
+        # cv2.imshow("fish_eyes", inscribed_img)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+        cv2.imwrite(img_output, inscribed_img)
         return img_output
 
-    imwrite(img_output, inscribed_img)
+    cv2.imwrite(img_output, inscribed_img)
     return (bDetected, body_angle,
             eyeL_angle, eyeR_angle,
             eyeL_area, eyeR_area,
