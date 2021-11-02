@@ -8,7 +8,7 @@ from os import getcwd, listdir, makedirs
 from os.path import exists, join, basename, normpath
 from cv2 import *
 
-class Processor(Screen):
+class Processor_Window(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.frame_no = 0
