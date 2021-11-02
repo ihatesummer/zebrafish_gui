@@ -1,21 +1,9 @@
-# %%
-from cv2 import (
-    imread, imwrite, imshow, waitKey,
-    destroyAllWindows, cvtColor,
-    inRange, findContours, drawContours,
-    matchShapes, ellipse, fitEllipse,
-    circle, line, putText, contourArea,
-    COLOR_BGR2GRAY, RETR_EXTERNAL,
-    CHAIN_APPROX_NONE, CONTOURS_MATCH_I1,
-    FONT_HERSHEY_SIMPLEX, LINE_AA
-    )
+from cv2 import *
 from numpy import (
-    delete, array, argmax, argmin, 
-    zeros, shape, append)
+    delete, array, argmax, argmin, append)
 from numpy import degrees, arctan2
 from numpy.linalg import norm
 from math import sin, cos, radians, degrees
-from re import findall
 
 # Color space: (B, G, R)
 BLUE = (255, 0, 0)
@@ -24,52 +12,6 @@ RED = (0, 0, 255)
 WHITE = (255, 255, 255)
 YELLOW = (0, 255, 255)
 PURPLE = (255, 0, 255)
-
-
-def alloc_result_space(nFrames):
-    # bool, True by default
-    out_bDetected = zeros(nFrames) < 1
-    # int, from 0 to nFrames-1
-    out_frame_no = zeros(nFrames)
-    # float, body eye angle [degree]
-    out_angle_B= zeros(nFrames)
-    # float, left eye angle [degree]
-    out_angle_L = zeros(nFrames)
-    # float, right eye angle [degree]
-    out_angle_R = zeros(nFrames)
-    # float, left eye area
-    out_area_L = zeros(nFrames)
-    # float, right eye area
-    out_area_R= zeros(nFrames)
-    # float, left eye minor axis length
-    out_ax_min_L = zeros(nFrames)
-    # float, left eye major axis length
-    out_ax_maj_L = zeros(nFrames)
-    # float, right eye minor axis length
-    out_ax_min_R = zeros(nFrames)
-    # float, right eye major axis length
-    out_ax_maj_R = zeros(nFrames)
-
-    return (out_bDetected, out_frame_no,
-            out_angle_B,
-            out_angle_L, out_angle_R,
-            out_area_L, out_area_R,
-            out_ax_min_L, out_ax_maj_L,
-            out_ax_min_R, out_ax_maj_R)
-
-
-def get_frame_no(filename: str) -> int:
-    """
-    Extracts number from a given filename.
-    Error when the filename contains more than one numbers.
-    """
-    num = findall(r'\d+', filename)
-    if len(num) == 1:
-        return int(num[0])
-    else:
-        print("ERROR: Can't retrieve frame number ; \
-              filename contains more than one number")
-        return None
 
 
 def get_midpoint(c1, c2):
@@ -569,7 +511,6 @@ def main(crop_ratio,
             eyeL_area, eyeR_area,
             eyeL_ax_min, eyeL_ax_maj,
             eyeR_ax_min, eyeR_ax_maj)
-
     
 
 if __name__ == "__main__":
