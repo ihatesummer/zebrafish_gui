@@ -455,6 +455,7 @@ def main(crop_ratio,
         right_eye_idx = 1
     
     eyeL_angle = eye_angles[left_eye_idx]
+    eyeL_angle = 180 - eyeL_angle # symmetric angle
     eyeR_angle = eye_angles[right_eye_idx]
     eyeL_area = eye_areas[left_eye_idx]
     eyeR_area = eye_areas[right_eye_idx]

@@ -444,7 +444,7 @@ class Processor_Window(Screen):
             #     print(f"ERROR: try adjusting the settings: {e}")
 
     def normalize_area(self, area):
-        mean_area = mean(area)
+        mean_area = np.mean(area)
         return (area - mean_area) / mean_area
 
     def save_result(

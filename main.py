@@ -22,7 +22,6 @@ class Processing(Processor_Window):
 class Plotting(Plotter_Window):
     pass
 
-
 class ZebrafishApp(App):
     def build(self):
         return wm_kv

@@ -151,7 +151,6 @@ class Plotter_Window(Screen):
                               self.peak_prominence,
                               distance=self.fps)
         return len(peaks)
-
     
     def get_slowPhase_idx(self, y):
         peaks, _ = find_peaks(-y,
@@ -417,6 +416,17 @@ class Plotter_Window(Screen):
                     self.custom_colors,
                     self.graph_title,
                     self.axes_selection["x"])
+            if len(y) == 2: #both left and right eyes selected
+                gg.main_separate(output_namepath,
+                                 x, xlabel, self.x_range,
+                                 y, y_label, self.y_range,
+                                 self.eye_selection,
+                                 self.custom_grid,
+                                 self.custom_label,
+                                 self.custom_eye_label,
+                                 self.custom_colors,
+                                 self.graph_title,
+                                 self.axes_selection["x"])
             self.graph_file = output_namepath
             self.ids.preview_graph.source = self.graph_file
         except:
