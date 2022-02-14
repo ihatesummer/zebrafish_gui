@@ -451,8 +451,12 @@ def main(crop_ratio,
     else:
         # Skipping bladder detection
         body_angle = 0.0
-        left_eye_idx = 0
-        right_eye_idx = 1
+        if eye_centers[0][0] < eye_centers[1][0]:
+            left_eye_idx = 0
+            right_eye_idx = 1
+        else:
+            left_eye_idx = 1
+            right_eye_idx = 0
     
     eyeL_angle = eye_angles[left_eye_idx]
     eyeL_angle = 180 - eyeL_angle # symmetric angle
