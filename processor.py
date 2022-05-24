@@ -422,26 +422,26 @@ class Processor_Window(Screen):
                   f"{self.nFrames} frames failed.")
         # test/debug mode
         else:
-            # try:
-            savename = d.main(
-                self.crop_ratio,
-                self.bBladderSkip,
-                self.brt_bounds_eye,
-                self.len_bounds_eye,
-                self.brt_bounds_bladder,
-                self.len_bounds_bladder,
-                self.Hu_dist_thresh,
-                self.ins_offset_eyeL,
-                self.ins_offset_eyeR,
-                self.ins_offset_bladder,
-                self.frame,
-                self.frame_processed,
-                debug
-                )
-            self.ids.preview_proc.source = savename
-            self.ids.preview_proc.reload()
-            # except Exception as e:
-            #     print(f"ERROR: try adjusting the settings: {e}")
+            try:
+                savename = d.main(
+                    self.crop_ratio,
+                    self.bBladderSkip,
+                    self.brt_bounds_eye,
+                    self.len_bounds_eye,
+                    self.brt_bounds_bladder,
+                    self.len_bounds_bladder,
+                    self.Hu_dist_thresh,
+                    self.ins_offset_eyeL,
+                    self.ins_offset_eyeR,
+                    self.ins_offset_bladder,
+                    self.frame,
+                    self.frame_processed,
+                    debug
+                    )
+                self.ids.preview_proc.source = savename
+                self.ids.preview_proc.reload()
+            except Exception as e:
+                print(f"ERROR: try adjusting the settings: {e}")
 
     def normalize_area(self, area):
         mean_area = np.mean(area)
