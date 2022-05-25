@@ -342,6 +342,8 @@ class Plotter_Window(Screen):
         return bpm
 
     def generate_graph(self):
+        print(self.ids.flip_left.active)
+        print(self.ids.flip_right.active)
         if self.bNoData:
             print("No datasheet available.")
             return None
@@ -415,7 +417,9 @@ class Plotter_Window(Screen):
                     self.custom_eye_label,
                     self.custom_colors,
                     self.graph_title,
-                    self.axes_selection["x"])
+                    self.axes_selection["x"],
+                    self.ids.flip_left.active,
+                    self.ids.flip_right.active)
             if len(y) == 2: #both left and right eyes selected
                 gg.main_separate(output_namepath,
                                  x, xlabel, self.x_range,
@@ -426,7 +430,9 @@ class Plotter_Window(Screen):
                                  self.custom_eye_label,
                                  self.custom_colors,
                                  self.graph_title,
-                                 self.axes_selection["x"])
+                                 self.axes_selection["x"],
+                                self.ids.flip_left.active,
+                                self.ids.flip_right.active)
             self.graph_file = output_namepath
             self.ids.preview_graph.source = self.graph_file
         except:

@@ -9,7 +9,6 @@ from processor import Processor_Window
 from plotter import Plotter_Window
 
 kivy.require('2.0.0')
-
 Config.set('kivy', 'exit_on_escape', '0')
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning) 
 

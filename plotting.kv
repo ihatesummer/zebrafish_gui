@@ -59,6 +59,30 @@
                     height: self.parent.height - 200
                     source: root.graph_file
                     allow_stretch: True
+                BoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y: 0.1
+                    spacing: 3
+                    Label:
+                        text: "Flip Left"
+                        background_color: (0,0,0,1)
+                        size_hint_x: None
+                        width: self.parent.width * 0.35
+                    CheckBox:
+                        id: flip_left
+                        active: False
+                        size_hint_x: None
+                        width: self.parent.width * 0.15
+                    Label:
+                        text: "Flip Right"
+                        background_color: (0,0,0,1)
+                        size_hint_x: None
+                        width: self.parent.width * 0.35
+                    CheckBox:
+                        id: flip_right
+                        active: False
+                        size_hint_x: None
+                        width: self.parent.width * 0.15
             # Right Pane (axes settings)
             BoxLayout:
                 orientation: "vertical"

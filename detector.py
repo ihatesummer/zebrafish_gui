@@ -14,32 +14,34 @@ YELLOW = (0, 255, 255)
 PURPLE = (255, 0, 255)
 
 
-def get_midpoint(c1, c2):
+def get_midpoint(point1, point2):
     """
     Calculates (x,y) indices of Euclidean mean
-    of two given 2D points
-    :param c1: coordinate of the first point; [int, int]
-    :param c2: coordinate of the second point; [int, int]
+    of two given 2D points.
+    - c1: coordinate of the first point. [int, int]
+    - c2: coordinate of the second point. [int, int]
     """
-    return (int((c1[0]+c2[0])/2), int((c1[1]+c2[1])/2))
+    midpoint_x = int((point1[0]+point2[0])/2)
+    midpoint_y = int((point1[1]+point2[1])/2)
+    return (midpoint_x, midpoint_y)
 
 
-def crop_image(img, hor, vert):
+def crop_image(cv_image, bounds_horizontal, bounds_vertical):
     """
-    Crops image by given ratios (0.0~1.0)
-    :param img: original openCV image source
-    :param hor: starting and ending horizontal ratios
-                (left to right) [float, float]
-    :param hor: starting and ending vertical ratios
-                (top to bottom) [float, float]
+    Crops image by given ratios.
+    - cv_image: original openCV image source
+    - bounds_horizontal: horizontal crop-bound ratios.
+        left(0.0) to right(1.0). [float, float]
+    - bounds_vertical: starting and ending vertical ratios.
+        top(0.0) to bottom(1.0). [float, float]
     """
-    height, width = img.shape[0:2]
-    hor_left = int(width*hor[0])
-    hor_right = int(width*hor[1])
-    vert_top = int(height*vert[0])
-    vert_bottom = int(height*vert[1])
+    height, width = cv_image.shape[0:2]
+    hor_left = int(width*bounds_horizontal[0])
+    hor_right = int(width*bounds_horizontal[1])
+    vert_top = int(height*bounds_vertical[0])
+    vert_bottom = int(height*bounds_vertical[1])
 
-    crop = img[vert_top:vert_bottom, hor_left:hor_right]
+    crop = cv_image[vert_top:vert_bottom, hor_left:hor_right]
     return crop
 
 
