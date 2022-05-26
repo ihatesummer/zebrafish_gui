@@ -1,9 +1,6 @@
 import cv2
-from numpy import (
-    delete, array, argmax, argmin, append)
-from numpy import degrees, arctan2
-from numpy.linalg import norm
-from math import sin, cos, radians, degrees
+import numpy as np
+import math
 
 # Color space: (B, G, R)
 BLUE = (255, 0, 0)
@@ -26,95 +23,102 @@ def get_midpoint(point1, point2):
     return (midpoint_x, midpoint_y)
 
 
-def crop_image(cv_image, bounds_horizontal, bounds_vertical):
+def crop_image(original_image, bounds_horizontal, bounds_vertical):
     """
     Crops image by given ratios.
-    - cv_image: original openCV image source
+    - original_image: original openCV image source
     - bounds_horizontal: horizontal crop-bound ratios.
         left(0.0) to right(1.0). [float, float]
     - bounds_vertical: starting and ending vertical ratios.
         top(0.0) to bottom(1.0). [float, float]
     """
-    height, width = cv_image.shape[0:2]
-    hor_left = int(width*bounds_horizontal[0])
-    hor_right = int(width*bounds_horizontal[1])
-    vert_top = int(height*bounds_vertical[0])
-    vert_bottom = int(height*bounds_vertical[1])
+    original_height, original_width = original_image.shape[0:2]
 
-    crop = cv_image[vert_top:vert_bottom, hor_left:hor_right]
-    return crop
+    bound_left = int(original_width*bounds_horizontal[0])
+    bound_right = int(original_width*bounds_horizontal[1])
+    bound_top = int(original_height*bounds_vertical[0])
+    bound_bottom = int(original_height*bounds_vertical[1])
+
+    cropped_image = original_image[bound_top:bound_bottom,
+                    bound_left:bound_right]
+
+    return cropped_image
 
 
-def get_binary_brightness(img, bound):
+def convert_to_black_or_white(original_image, thresholds):
     """
     Converts all pixels to either black or white.
     If a pixel's brightness is between
-    the given bound, it converts to white.
+    the given thresholds, it converts to white.
     Otherwise, it is converted to black.
-    :param img: original cv image source
-    :param bound: low and high thresholds
+    - original_image: original cv image source
+    - thresholds: low and high thresholds
                   (0=darkest, 255=brightest)
                   [int, int]
     """
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    black_or_white = cv2.inRange(gray, bound[0], bound[1])
-    return black_or_white
+    image_grayscale = cv2.cvtColor(original_image,
+                                   cv2.COLOR_BGR2GRAY)
+    image_black_or_white = cv2.inRange(image_grayscale,
+                                       thresholds[0],
+                                       thresholds[1])
+    return image_black_or_white
 
 
-def get_contours(img_bin_brt):
+def get_contours(image_black_or_white):
     """
-    Get all contours within the length bound.
-    :param img_bin_brt: black-and-white image 
+    Get all contours from the given image
+    - image_black_or_white: black-or-white image 
     """
     all_contours, _ = cv2.findContours(
-        img_bin_brt,
+        image_black_or_white,
         mode=cv2.RETR_EXTERNAL,
         method=cv2.CHAIN_APPROX_NONE)
-
     return all_contours
 
 
-def filter_by_length(contours, length_treshold):
+def filter_contours_by_length(contours, thresholds):
+    """
+    Filter the contours that fit within the given length bounds
+    - contours: list of all contours
+    - thresholds: low and high length thresholds [int, int]
+    """
     filtered_contours = []
-    thresh_low, thresh_high = length_treshold
-
     for contour in contours:
-        if (thresh_low < len(contour) < thresh_high):
+        if (thresholds[0] < len(contour) < thresholds[1]):
             filtered_contours.append(contour)
-
     return filtered_contours
 
 
-def remove_non_eyes(eyes, diff_thresh, debug):
+def remove_non_eyes(
+        potential_eyes, difference_threshold):
     """
     Removes contour(s) that are not likely eye(s)
-    by comparing shapes (Hu moments) with each other.
-    :param eyes: contours that may be eyes
-    :param diff_thresh: Hu distance threshold.
-                        If a contour's shape differences
-                        to all other contours are bigger
-                        than this threshold, that contour
-                        is considered not an eye
+    by comparing shapes with each other.
+    - potential_eyes: contours that may be eyes
+    - difference_threshold: Hu moment threshold.
+        If a contour's shape differences to all 
+        other contours are bigger than the threshold,
+        that contour is considered not an eye
     """
-    if debug != None:
-        print(f"{len(eyes)} contours are found as potential eyes...")
-    remove_idx = array([], dtype=int)
-    for i in range(len(eyes)):
-        diff_list = []
-        for j in range(len(eyes)):
-            if i != j:
-                shape_diff = cv2.matchShapes(
-                    eyes[i], eyes[j], cv2.CONTOURS_MATCH_I1, 0)
-                diff_list.append(shape_diff)
-                if debug != None:
-                    print(f"Hu distance of contours ({i, j}): {shape_diff}")
-        if all(diff > diff_thresh for diff in diff_list):
-            remove_idx = append(remove_idx, i)
-            if debug != None:
-                print(f"Eye(s) {remove_idx} removed.")
-
-    eyes_filtered = delete(eyes, remove_idx, axis=0)
-
+    # print(f"{len(potential_eyes)} contours are found as potential eyes...")
+    n_eyes = len(potential_eyes)
+    remove_idx = np.array([], dtype=int)
+    for i in range(n_eyes):
+        differences = []
+        for j in range(n_eyes):
+            if i == j:
+                continue
+            shape_diff = cv2.matchShapes(
+                potential_eyes[i], potential_eyes[j],
+                cv2.CONTOURS_MATCH_I1, 0)
+            differences.append(shape_diff)
+            # print(f"Hu distance of contours ({i, j}): {shape_diff}")
+        if all((difference > difference_threshold) for
+                difference in differences):
+            remove_idx = np.append(remove_idx, i)
+            # print(f"Eye(s) {remove_idx} removed.")
+    eyes_filtered = np.delete(potential_eyes,
+                              remove_idx, axis=0)
     return eyes_filtered, len(remove_idx)
 
 
@@ -122,7 +126,8 @@ def correct_angle(angle):
     """
     Converts counter-clock-wise minor-axis
     angle [degrees] to clock-wise 
-    major-axis angle [degrees]
+    major-axis angle [degrees].
+    - angle: original uncorrected angle
     """
     if angle > 90:
         maj_ax_angle = 180 - (angle - 90)
@@ -136,17 +141,17 @@ def inscribe_major_axis(result, xc, yc,
                         d1, d2, angle,
                         color, thickness):
     rmajor = max(d1, d2)/2
-    xtop = xc - cos(radians(angle))*rmajor
-    ytop = yc + sin(radians(angle))*rmajor
-    xbot = xc + cos(radians(angle))*rmajor
-    ybot = yc - sin(radians(angle))*rmajor
+    xtop = xc - math.cos(np.radians(angle))*rmajor
+    ytop = yc + math.sin(np.radians(angle))*rmajor
+    xbot = xc + math.cos(np.radians(angle))*rmajor
+    ybot = yc - math.sin(np.radians(angle))*rmajor
     cv2.line(result, (int(xtop), int(ytop)),
-         (int(xbot), int(ybot)), color, thickness)
+             (int(xbot), int(ybot)), color, thickness)
 
 
 def inscribe_text(result, text, center,
-             pos_offset, fontsize,
-             color, thickness):
+                  pos_offset, fontsize,
+                  color, thickness):
     xc, yc = center
     offset_x, offset_y = pos_offset
     org = (int(xc+offset_x), int(yc+offset_y))  # bottom-left corner of text
@@ -168,19 +173,19 @@ def remove_false_bladder(bladders, eyes):
     """
     eye_centers = []
     for eye in eyes:
-        eye_center, _, _ = cv2.cv2.fitEllipse(eye)
-        eye_centers.append(array(eye_center))
+        eye_center, _, _ = cv2.fitEllipse(eye)
+        eye_centers.append(np.array(eye_center))
     eyes_midpoint = get_midpoint(eye_centers[0], eye_centers[1])
 
     bladder_to_eye_distances = []
     for bladder in bladders:
-        bladder_center, _, _ = cv2.cv2.fitEllipse(bladder)
-        dist = norm(
-            array(bladder_center)-array(eyes_midpoint),
+        bladder_center, _, _ = cv2.fitEllipse(bladder)
+        dist = np.linalg.norm(
+            np.array(bladder_center)-np.array(eyes_midpoint),
             ord=2)
         bladder_to_eye_distances.append(dist)
 
-    argmax_idx = argmax(bladder_to_eye_distances)
+    argmax_idx = np.argmax(bladder_to_eye_distances)
 
     return bladders[argmax_idx]
 
@@ -189,7 +194,7 @@ def get_angle(ref_point, measure_point):
     # since y-axis is flipped in CV.
     yDiff = -(measure_point[1]-ref_point[1])
     xDiff = measure_point[0]-ref_point[0]
-    angle = degrees(arctan2(yDiff, xDiff))
+    angle = np.degrees(np.arctan2(yDiff, xDiff))
     if angle < 0:
         angle += 360
     return angle
@@ -223,15 +228,15 @@ def main(crop_ratio,
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
         savename = f"{img_input[:-4]}" + "_cropped.png"
-        cv2.cv2.imwrite(savename, img)
+        cv2.imwrite(savename, img)
         return savename
     
     # Eyes
-    img_bin_brt = get_binary_brightness(img, brt_bounds_eye)
+    img_bin_brt = convert_to_black_or_white(img, brt_bounds_eye)
     
     if debug == "eye_brt":
         savename = f"{img_input[:-4]}" + "_eyebrt.png"
-        cv2.cv2.imwrite(savename, img_bin_brt)
+        cv2.imwrite(savename, img_bin_brt)
         return savename
         # cv2.imshow(
         #     'Binary image <Eyes>',
@@ -240,7 +245,7 @@ def main(crop_ratio,
         # cv2.destroyAllWindows()
 
     all_cnt_eyes = get_contours(img_bin_brt)
-    filtered_cnt_eyes = filter_by_length(
+    filtered_cnt_eyes = filter_contours_by_length(
         all_cnt_eyes, len_bounds_eye)
     if debug == "eye_cnt":
         print("Lengths of all contours:")
@@ -249,7 +254,7 @@ def main(crop_ratio,
             lens.append(len(contour))
         print(lens)
         tmp_img = img.copy()
-        img_all_contours = cv2.cv2.drawContours(
+        img_all_contours = cv2.drawContours(
             tmp_img, all_cnt_eyes, -1, YELLOW, 3)
 
         print("Filtering contours with length bounds of ",
@@ -274,7 +279,7 @@ def main(crop_ratio,
     '''
     while len(filtered_cnt_eyes) > 2:
         filtered_cnt_eyes, removal_count = remove_non_eyes(
-            filtered_cnt_eyes, Hu_dist_thresh, debug)
+            filtered_cnt_eyes, Hu_dist_thresh)
         if removal_count==0:
             print("ERROR: failed at removing false eye(s)."
                   "Try adjusting the Hu distance threshold")
@@ -300,9 +305,9 @@ def main(crop_ratio,
             bDetected = False
             break
         else:
-            img_bin_brt = get_binary_brightness(
+            img_bin_brt = convert_to_black_or_white(
                 img, [brt_bounds_eye[0], tmp_brt_ub])
-            filtered_cnt_eyes = filter_by_length(all_cnt_eyes, len_bounds_eye)
+            filtered_cnt_eyes = filter_contours_by_length(all_cnt_eyes, len_bounds_eye)
     if not bDetected:
         print(f"ERROR: Failed at detecting 2 eyes for {img_input}")
         return bDetected, 0, 0, 0
@@ -321,7 +326,7 @@ def main(crop_ratio,
 
     # Bladder
     if not bBladderSkip:
-        img_bin_brt = get_binary_brightness(
+        img_bin_brt = convert_to_black_or_white(
             img, brt_bounds_bladder)
     
         if debug == "blad_brt":
@@ -335,7 +340,7 @@ def main(crop_ratio,
             return savename
 
         all_cnt_blad = get_contours(img_bin_brt)
-        filtered_cnt_blad = filter_by_length(
+        filtered_cnt_blad = filter_contours_by_length(
             all_cnt_blad, len_bounds_bladder)
 
         if debug == "blad_cnt":
@@ -386,9 +391,9 @@ def main(crop_ratio,
                 tmp_img = img.copy()
                 img_len_fil_con = cv2.drawContours(
                     tmp_img, filtered_cnt_blad, -1, GREEN, 2)
-                # cv2.cv2.imshow(f'Detected bladder for {img_input}', img_len_fil_con)
-                # cv2.cv2.waitKey(0)
-                # cv2.cv2.destroyAllWindows()
+                # cv2.imshow(f'Detected bladder for {img_input}', img_len_fil_con)
+                # cv2.waitKey(0)
+                # cv2.destroyAllWindows()
     else:
         if debug == "blad_brt" or debug == "blad_cnt":
             print("ERROR: Bladder detection disabled by configuration.")
@@ -445,11 +450,11 @@ def main(crop_ratio,
         if max(angles_eye2blad) - min(angles_eye2blad) > 180:
             # Positive x-axis caught between the two eyes.
             print("positive x-axis caught between the two eyes.")
-            left_eye_idx = argmin(angles_eye2blad)
-            right_eye_idx = argmax(angles_eye2blad)
+            left_eye_idx = np.argmin(angles_eye2blad)
+            right_eye_idx = np.argmax(angles_eye2blad)
         else:
-            left_eye_idx = argmax(angles_eye2blad)
-            right_eye_idx = argmin(angles_eye2blad)
+            left_eye_idx = np.argmax(angles_eye2blad)
+            right_eye_idx = np.argmin(angles_eye2blad)
     else:
         # Skipping bladder detection
         body_angle = 0.0
