@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from numpy import argmax, max, min, ndarray
+from numpy import argmax, max, min, ndarray, mean
 from scipy.signal import find_peaks
 
 
@@ -272,7 +272,8 @@ def main(output, x, x_label, x_range,
          custom_label,
          custom_eye_label,
          custom_colors,
-         graph_title, xAxis):
+         graph_title, xAxis,
+         flip_left, flip_right):
     _, ax = plt.subplots()
 
     if len(y_list) == 2:
@@ -286,6 +287,16 @@ def main(output, x, x_label, x_range,
                 print_maximum(x, y_arr, x_range)
         else:
             for i, y_arr in enumerate(y_list):
+                if i==0 and flip_left:
+                    avg = mean(y_arr)
+                    y_arr *= -1
+                    new_avg = mean(y_arr)
+                    y_arr += (avg-new_avg)
+                if i==1 and flip_right:
+                    avg = mean(y_arr)
+                    y_arr *= -1
+                    new_avg = mean(y_arr)
+                    y_arr += (avg-new_avg)
                 ax.plot(x, y_arr,
                         color=custom_colors[i],
                         label=custom_eye_label[i],
@@ -303,6 +314,11 @@ def main(output, x, x_label, x_range,
             ax.legend(loc="upper right")
             print_maximum(x, y_list[0], x_range)
         else:
+            if (lr_selected[0] == "left" and flip_left) or (lr_selected[0] == "right" and flip_right):
+                avg = mean(y_list[0])
+                y_list[0] *= -1
+                new_avg = mean(y_list[0])
+                y_list[0] += (avg-new_avg)
             ax.plot(x, y_list[0],
                     my_color, linewidth=1)
 
@@ -354,7 +370,8 @@ def main_separate(output, x, x_label, x_range,
                   custom_label,
                   custom_eye_label,
                   custom_colors,
-                  graph_title, xAxis):
+                  graph_title, xAxis,
+                  flip_left, flip_right):
     _, axes = plt.subplots(nrows=2, ncols=1,
                            tight_layout=True)
 
