@@ -163,9 +163,7 @@ def show_spv(output, time, x_label, x_range,
 
 def show_bpm(output, bpms, eye_selection):
     if len(eye_selection) == 2 and eye_selection[0] == 'right':
-        print('yeah')
         eye_selection = ['left', 'right']
-    print(eye_selection)
     _, ax = plt.subplots()
     pos_x = 0.25
     pos_y = 0.5

@@ -405,8 +405,9 @@ class Plotter_Window(Screen):
                 sample_interval = 1 / self.fps
                 # x = rfftfreq(nSamples, sample_interval)
                 x, _ = welch(y_arr, self.fps)
-                idx_y_unit = y_label.index("[") - 1
-                y_label = y_label[:idx_y_unit] + " - Amplitude"
+                # idx_y_unit = y_label.index("[") - 1
+                y_label = y_label + " - Amplitude"
+                # y_label = y_label[:idx_y_unit] + " - Amplitude"
 
             gg.main(output_namepath,
                     x, xlabel, self.x_range,
@@ -422,21 +423,21 @@ class Plotter_Window(Screen):
                     self.ids.flip_right.active)
             if len(y) == 2: #both left and right eyes selected
                 gg.main_separate(output_namepath,
-                                 x, xlabel, self.x_range,
-                                 y, y_label, self.y_range,
-                                 self.eye_selection,
-                                 self.custom_grid,
-                                 self.custom_label,
-                                 self.custom_eye_label,
-                                 self.custom_colors,
-                                 self.graph_title,
-                                 self.axes_selection["x"],
+                                    x, xlabel, self.x_range,
+                                    y, y_label, self.y_range,
+                                    self.eye_selection,
+                                    self.custom_grid,
+                                    self.custom_label,
+                                    self.custom_eye_label,
+                                    self.custom_colors,
+                                    self.graph_title,
+                                    self.axes_selection["x"],
                                 self.ids.flip_left.active,
                                 self.ids.flip_right.active)
             self.graph_file = output_namepath
             self.ids.preview_graph.source = self.graph_file
-        except:
-            print("ERROR: invalid configuration(s).")
+        except Exception as e:
+            print(f"ERROR: invalid configuration(s): {e}")
 
     def update_wrtB(self, instance, value):
         self.wrt_B = value
