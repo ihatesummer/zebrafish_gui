@@ -217,7 +217,7 @@ def main(crop_ratio,
     Detects and inscribes angles onto the image(s).
     """
     bDetected = True
-    font_size = 0.5
+    font_size = 0.3
     font_thickness = 1
     img = cv2.imread(img_input)
 

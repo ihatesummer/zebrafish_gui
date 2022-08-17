@@ -220,7 +220,7 @@ class Plotter_Window(Screen):
          angle_wrtB, angle) = eyeData_collection
         if selection == "area":
             y = self.moving_average(area)
-            return y, "Normalized area [0-1]", [None]
+            return y, "Normalized area", [None]
         if selection == "axRatio":
             y = self.moving_average(axRatio)
             return y, "Axes ratio [major:minor]", [None]
