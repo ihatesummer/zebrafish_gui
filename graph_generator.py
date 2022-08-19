@@ -221,12 +221,10 @@ def show_spv(output, time, x_label, x_range,
 
         ax.plot(time, y_arr,
                 color=my_color,
-                label=custom_eye_label[0],
                 linewidth=1)
-        ax.plot(low_peaks/fps, y_arr[low_peaks], "x", color=custom_colors[0], markersize=10)
-        ax.plot(slowPhase_max_idx/fps, y_arr[slowPhase_max_idx], "^", color=custom_colors[0], markersize=10)
-        ax.plot(slowPhase_min_idx/fps, y_arr[slowPhase_min_idx], "v", color=custom_colors[0], markersize=10)
-        ax.legend(loc="upper right")
+        ax.plot(low_peaks/fps, y_arr[low_peaks], "x", color=my_color, markersize=10)
+        ax.plot(slowPhase_max_idx/fps, y_arr[slowPhase_max_idx], "^", color=my_color, markersize=10)
+        ax.plot(slowPhase_min_idx/fps, y_arr[slowPhase_min_idx], "v", color=my_color, markersize=10)
         
 
     else:
