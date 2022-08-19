@@ -21,12 +21,24 @@ def peak_preview(output, x, x_label, x_range,
                  custom_eye_label,
                  custom_colors,
                  graph_title,
-                 peak_prominence):
+                 peak_prominence,
+                 flip_left, flip_right):
     frame_duration = x[1] - x[0]
     fps = 1/frame_duration
+
     _, ax = plt.subplots()
     if len(y_list) == 2:
         for i, y_arr in enumerate(y_list):
+            if i==0 and flip_left:
+                avg = mean(y_arr)
+                y_arr *= -1
+                new_avg = mean(y_arr)
+                y_arr += (avg-new_avg)
+            if i==1 and flip_right:
+                avg = mean(y_arr)
+                y_arr *= -1
+                new_avg = mean(y_arr)
+                y_arr += (avg-new_avg)
             ax.plot(x, y_arr,
                     color=custom_colors[i],
                     label=custom_eye_label[i],
@@ -36,6 +48,11 @@ def peak_preview(output, x, x_label, x_range,
             ax.plot(x[peaks], y_arr[peaks], "x", markersize=10, color=custom_colors[i])
             print(f"Peak occurrences: {x[peaks]} second")
     elif len(y_list) == 1:
+        if (lr_selected[0] == "left" and flip_left) or (lr_selected[0] == "right" and flip_right):
+            avg = mean(y_list[0])
+            y_list[0] *= -1
+            new_avg = mean(y_list[0])
+            y_list[0] += (avg-new_avg)
         y = y_list[0]
         if lr_selected[0] == "left":
             my_color = custom_colors[0]
@@ -160,6 +177,7 @@ def show_spv(output, time, x_label, x_range,
     plt.savefig(output)  # png
     plt.savefig(output[:-4]+".pdf")  # pdf
     plt.close('all')
+
 
 def show_bpm(output, bpms, eye_selection):
     if len(eye_selection) == 2 and eye_selection[0] == 'right':

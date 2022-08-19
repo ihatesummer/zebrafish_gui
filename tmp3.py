@@ -42,8 +42,6 @@ def main():
     f_R, fft_R = welch(norm_area_R, fs=fps)
     normalizer_L = integrate.cumtrapz(fft_L, f_L)[-1]
     normalizer_R = integrate.cumtrapz(fft_R, f_R)[-1]
-    print(normalizer_L)
-    print(normalizer_R)
 
     order = 6
     cutoff = 1
@@ -53,6 +51,8 @@ def main():
 
     f_L, fft_L_LPF = welch(norm_area_L_LPF, fs=fps)
     f_R, fft_R_LPF = welch(norm_area_R_LPF, fs=fps)
+    normalizer_L_LPF = integrate.cumtrapz(fft_L_LPF, f_L)[-1]
+    normalizer_R_LPF = integrate.cumtrapz(fft_R_LPF, f_R)[-1]
 
     fig, axes = plt.subplots(nrows=2, ncols=2)
     fig.tight_layout()
@@ -69,10 +69,10 @@ def main():
     axes[0, 0].set_title("Time domain (L)")
     axes[1, 0].set_title("Time domain (R)")
 
-    axes[0, 1].plot(f_L, fft_L, "black", label="original", linewidth=1)
-    axes[1, 1].plot(f_R, fft_R, "black", label="original", linewidth=1)
-    axes[0, 1].plot(f_L, fft_L_LPF, "red", alpha=0.5, label="LPF", linewidth=2)
-    axes[1, 1].plot(f_R, fft_R_LPF, "red", alpha=0.5, label="LPF", linewidth=2)
+    axes[0, 1].plot(f_L, fft_L/normalizer_L, "black", label="original", linewidth=1)
+    axes[1, 1].plot(f_R, fft_R/normalizer_R, "black", label="original", linewidth=1)
+    axes[0, 1].plot(f_L, fft_L_LPF/normalizer_L_LPF, "red", alpha=0.5, label="LPF", linewidth=2)
+    axes[1, 1].plot(f_R, fft_R_LPF/normalizer_R_LPF, "red", alpha=0.5, label="LPF", linewidth=2)
     axes[0, 1].set_xlim(0, 3)
     axes[1, 1].set_xlim(0, 3)
     axes[0, 1].grid()

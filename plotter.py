@@ -122,7 +122,9 @@ class Plotter_Window(Screen):
                         self.custom_eye_label,
                         self.custom_colors,
                         self.graph_title,
-                        self.peak_prominence)
+                        self.peak_prominence,
+                        self.ids.flip_left.active,
+                        self.ids.flip_right.active)
         self.graph_file = output_namepath
         self.ids.preview_graph.source = self.graph_file
         self.ids.y_ax_SPV.active = True
@@ -362,7 +364,10 @@ class Plotter_Window(Screen):
                             self.custom_label,
                             self.custom_eye_label,
                             self.custom_colors,
-                            self.graph_title, idx)
+                            self.graph_title, idx,
+                            self.peak_prominence,
+                            self.ids.flip_left.active,
+                            self.ids.flip_right.active)
                 self.graph_file = output_namepath
                 self.ids.preview_graph.source = self.graph_file
                 return None
@@ -423,17 +428,17 @@ class Plotter_Window(Screen):
                     self.ids.flip_right.active)
             if len(y) == 2: #both left and right eyes selected
                 gg.main_separate(output_namepath,
-                                    x, xlabel, self.x_range,
-                                    y, y_label, self.y_range,
-                                    self.eye_selection,
-                                    self.custom_grid,
-                                    self.custom_label,
-                                    self.custom_eye_label,
-                                    self.custom_colors,
-                                    self.graph_title,
-                                    self.axes_selection["x"],
-                                self.ids.flip_left.active,
-                                self.ids.flip_right.active)
+                                 x, xlabel, self.x_range,
+                                 y, y_label, self.y_range,
+                                 self.eye_selection,
+                                 self.custom_grid,
+                                 self.custom_label,
+                                 self.custom_eye_label,
+                                 self.custom_colors,
+                                 self.graph_title,
+                                 self.axes_selection["x"],
+                                 self.ids.flip_left.active,
+                                 self.ids.flip_right.active)
             self.graph_file = output_namepath
             self.ids.preview_graph.source = self.graph_file
         except Exception as e:
