@@ -7,10 +7,10 @@ from numpy import (append, convolve,
                    linspace, loadtxt,
                    ones, roll)
 from numpy.core.fromnumeric import nonzero
+from scipy import integrate
 from scipy.fft import rfft, rfftfreq
-from scipy.signal import welch
+from scipy.signal import welch, find_peaks, butter, lfilter
 from datetime import datetime
-from scipy.signal import find_peaks
 
 class Plotter_Window(Screen):
     def __init__(self, **kwargs):
@@ -401,10 +401,19 @@ class Plotter_Window(Screen):
                     self.fft_timeRange[0]*self.fps)
                 idx_end = int(
                     self.fft_timeRange[1]*self.fps)
+                order = 6
+                cutoff = 1
+
                 for i, y_arr in enumerate(y):
                     y_arr = y_arr[idx_start:idx_end]
                     # y[i] = abs(rfft(y_arr)) / len(y_arr)
-                    _, y[i] = welch(y_arr, self.fps)
+                    if self.ids.lpf.active:
+                        b, a = butter(order, cutoff, fs=self.fps, btype='low', analog=False)
+                        y_arr = lfilter(b, a, y_arr)
+                    f, y[i] = welch(y_arr, self.fps)
+                    if self.ids.normalize.active:
+                        normalizer = integrate.cumtrapz(y[i], f)[-1]
+                        y[i] = y[i] / normalizer
                 nSamples = len(
                     self.c_time[idx_start:idx_end])
                 sample_interval = 1 / self.fps

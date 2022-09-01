@@ -132,25 +132,25 @@
                             BoxLayout:
                                 orientation: 'horizontal'
                                 Label:
-                                    text: "Frequency [Hz], between"
+                                    text: "Freq. [Hz]"
                                     background_color: (0,0,0,1)
-                                    size_hint_x: 0.4
+                                    size_hint_x: 0.2
                                 TextInput:
                                     id: fft_timeRange_from
                                     multiline: False
                                     text: '0'
                                     on_text: root.set_fft_timeRange()
-                                    size_hint_x: 0.15
-                                Label:
-                                    text: "and"
-                                    background_color: (0,0,0,1)
                                     size_hint_x: 0.1
+                                Label:
+                                    text: "~"
+                                    background_color: (0,0,0,1)
+                                    size_hint_x: 0.05
                                 TextInput:
                                     id: fft_timeRange_to
                                     multiline: False
                                     text: '0'
                                     on_text: root.set_fft_timeRange()
-                                    size_hint_x: 0.15
+                                    size_hint_x: 0.1
                                 Label:
                                     text: "sec"
                                     background_color: (0,0,0,1)
@@ -160,6 +160,21 @@
                                     group: "x-axis choice"
                                     on_active: root.update_axes_selection(self, self.active, "x", "freq")
                                     size_hint_x: 0.1
+                                Label:
+                                    text: "LPF"
+                                    background_color: (0,0,0,1)
+                                    size_hint_x: 0.1
+                                CheckBox:
+                                    id: lpf
+                                    size_hint_x: 0.1
+                                Label:
+                                    text: "Normalize"
+                                    background_color: (0,0,0,1)
+                                    size_hint_x: 0.15
+                                CheckBox:
+                                    id: normalize
+                                    size_hint_x: 0.1
+
                             Label:
                                 text: "Range:"
                                 size_hint_x: None

@@ -69,6 +69,8 @@ def main():
     axes[0, 0].set_title("Time domain (L)")
     axes[1, 0].set_title("Time domain (R)")
 
+    print(normalizer_L_LPF)
+    print(normalizer_R_LPF)
     axes[0, 1].plot(f_L, fft_L/normalizer_L, "black", label="original", linewidth=1)
     axes[1, 1].plot(f_R, fft_R/normalizer_R, "black", label="original", linewidth=1)
     axes[0, 1].plot(f_L, fft_L_LPF/normalizer_L_LPF, "red", alpha=0.5, label="LPF", linewidth=2)
