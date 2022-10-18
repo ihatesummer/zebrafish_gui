@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 from scipy.signal import find_peaks
 
 
@@ -106,37 +107,40 @@ def peak_preview(output, x, x_label, x_range,
     plt.close('all')
 
 
-def get_slowPhase_maxima(angVel, low_peaks, fps):
+def get_slowPhase_maxima(angVel, peaks, margins, fps):
+    left_margin, right_margin = margins # seconds
+    left_margin = int(left_margin*fps)
+    right_margin = int(right_margin*fps)
     max_indices = []
     start_frame = 0
-    for i in range(len(low_peaks)):
-        if low_peaks[i]/fps <= 1:
-            start_frame = low_peaks[i] + 1
+    for i in range(len(peaks)):
+        if peaks[i]/fps <= 1:
+            start_frame = peaks[i] + 1 + right_margin
             continue
-        target_window = angVel[start_frame: low_peaks[i]]
+        target_window = angVel[start_frame: peaks[i]-left_margin]
         max_indices.append(np.argmax(target_window) + start_frame)
-        start_frame = low_peaks[i] + 1
+        start_frame = peaks[i] + 1 + right_margin
     # one remaining window after the last peak
-    target_window = angVel[start_frame:]
+    target_window = angVel[start_frame+right_margin:]
     max_indices.append(np.argmax(target_window) + start_frame)
     return max_indices
 
 
-def get_slowPhase_minima(angVel, low_peaks, fps):
-    peak_margins = [0.5, 0.5] # seconds
+def get_slowPhase_minima(angVel, peaks, margins, fps):
+    left_margin, right_margin = margins # seconds
+    left_margin = int(left_margin*fps)
+    right_margin = int(right_margin*fps)
     min_indices = []
     start_frame = 0
-    left_margin = int(peak_margins[0]*fps)
-    right_margin = int(peak_margins[1]*fps)
-    for i in range(len(low_peaks)):
-        if low_peaks[i]/fps <= 1:
-            start_frame = low_peaks[i] + 1 + right_margin
+    for i in range(len(peaks)):
+        if peaks[i]/fps <= 1:
+            start_frame = peaks[i] + 1 + right_margin
             continue
-        target_window = angVel[start_frame: low_peaks[i]-left_margin]
+        target_window = angVel[start_frame: peaks[i]-left_margin]
         min_indices.append(np.argmin(target_window) + start_frame)
-        start_frame = low_peaks[i] + 1 + right_margin
+        start_frame = peaks[i] + 1 + right_margin
     # one remaining window after the last peak
-    target_window = angVel[start_frame:]
+    target_window = angVel[start_frame+right_margin:]
     min_indices.append(np.argmin(target_window) + start_frame)
     return min_indices
 
@@ -148,7 +152,7 @@ def show_spv(output, time, x_label, x_range,
              custom_label,
              custom_eye_label,
              custom_colors,
-             graph_title, idxs,
+             graph_title, margins,
              prominence,
              flip_left, flip_right):
     fps = 1 / (time[1] - time[0])
@@ -168,15 +172,17 @@ def show_spv(output, time, x_label, x_range,
                 y_arr += (avg-new_avg)
             
             low_peaks, _ = find_peaks(-y_arr, prominence, distance=fps)
-            slowPhase_max_idx = get_slowPhase_maxima(y_arr, low_peaks, fps)
-            slowPhase_min_idx = get_slowPhase_minima(y_arr, low_peaks, fps)
+            slowPhase_max_idx = get_slowPhase_maxima(y_arr, low_peaks, margins, fps)
+            slowPhase_min_idx = get_slowPhase_minima(y_arr, low_peaks, margins, fps)
             mean_slowPhase_maxima = np.mean(y_arr[slowPhase_max_idx])
             mean_slowPhase_minima = np.mean(y_arr[slowPhase_min_idx])
             slowPhase_rate = len(slowPhase_max_idx) / ((time[-1]-time[0])/60)
             if i == 0:
                 print("Left eye:")
+                csv_name = output[:-4]+"_spv_left.csv"
             if i == 1:
                 print("Right eye:")
+                csv_name = output[:-4]+"_spv_right.csv"
             print(f"Slow phase maxima times [s]: {slowPhase_max_idx/fps}")
             print(f"Slow phase maxima: {y_arr[slowPhase_max_idx]}")
             print(f"Mean slow phase maxima: {mean_slowPhase_maxima}")
@@ -184,6 +190,12 @@ def show_spv(output, time, x_label, x_range,
             print(f"Slow phase minima: {y_arr[slowPhase_min_idx]}")
             print(f"Mean slow phase minima: {mean_slowPhase_minima}")
             print(f"Slow phase count per minute: {slowPhase_rate}")
+
+            log = np.vstack(
+            (slowPhase_max_idx/fps, y_arr[slowPhase_max_idx],
+             slowPhase_min_idx/fps, y_arr[slowPhase_min_idx])).T
+            header = "max_time,max,min_time,min"
+            np.savetxt(csv_name, log, delimiter=',', header=header)
 
             ax.plot(time, y_arr,
                     color=custom_colors[i],
@@ -201,13 +213,15 @@ def show_spv(output, time, x_label, x_range,
             y_list[0] += (avg-new_avg)
         if lr_selected[0] == "left":
             my_color = custom_colors[0]
+            csv_name = output[:-4]+"_spv_left.csv"
         if lr_selected[0] == "right":
             my_color = custom_colors[1]
+            csv_name = output[:-4]+"_spv_right.csv"
 
         y_arr = y_list[0]
         low_peaks, _ = find_peaks(-y_arr, prominence, distance=fps)
-        slowPhase_max_idx = get_slowPhase_maxima(y_arr, low_peaks, fps)
-        slowPhase_min_idx = get_slowPhase_minima(y_arr, low_peaks, fps)
+        slowPhase_max_idx = get_slowPhase_maxima(y_arr, low_peaks, margins, fps)
+        slowPhase_min_idx = get_slowPhase_minima(y_arr, low_peaks, margins, fps)
         mean_slowPhase_maxima = np.mean(y_arr[slowPhase_max_idx])
         mean_slowPhase_minima = np.mean(y_arr[slowPhase_min_idx])
         slowPhase_rate = len(slowPhase_max_idx) / ((time[-1]-time[0])/60)
@@ -218,6 +232,12 @@ def show_spv(output, time, x_label, x_range,
         print(f"Slow phase minima: {y_arr[slowPhase_min_idx]}")
         print(f"Mean slow phase minima: {mean_slowPhase_minima}")
         print(f"Slow phase count per minute: {slowPhase_rate}")
+
+        log = np.vstack((
+            slowPhase_max_idx/fps, y_arr[slowPhase_max_idx],
+            slowPhase_min_idx/fps, y_arr[slowPhase_min_idx])).T
+        header = "max_time,max,min_time,min"
+        np.savetxt(csv_name, log, delimiter=',', header=header)
 
         ax.plot(time, y_arr,
                 color=my_color,

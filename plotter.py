@@ -364,7 +364,7 @@ class Plotter_Window(Screen):
                             self.custom_label,
                             self.custom_eye_label,
                             self.custom_colors,
-                            self.graph_title, idx,
+                            self.graph_title, self.peak_margins,
                             self.peak_prominence,
                             self.ids.flip_left.active,
                             self.ids.flip_right.active)
