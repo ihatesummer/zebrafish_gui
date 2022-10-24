@@ -46,6 +46,7 @@ class Plotter_Window(Screen):
         self.c_angle_wrtB_L = nonzero
         self.c_angle_R = None
         self.c_angle_wrtB_R = None
+        self.bPeakDownward = True
 
     def set_fft_timeRange(self):
         try:
@@ -94,6 +95,16 @@ class Plotter_Window(Screen):
         except:
             print("ERROR: Please enter floating points for margins.")
 
+    def set_peak_direction(self, isDown):
+        try:
+            if isDown:
+                self.bPeakDownward = True
+            else:
+                self.bPeakDownward = False
+            print("Update - Peak direction: ", self.bPeakDownward)
+        except:
+            pass
+
     def get_timestamp_namepath(self):
         now = datetime.now()
         date_time = now.strftime("%Y_%m_%d-%H_%M_%S.png")
@@ -124,7 +135,8 @@ class Plotter_Window(Screen):
                         self.graph_title,
                         self.peak_prominence,
                         self.ids.flip_left.active,
-                        self.ids.flip_right.active)
+                        self.ids.flip_right.active,
+                        self.bPeakDownward)
         self.graph_file = output_namepath
         self.ids.preview_graph.source = self.graph_file
         self.ids.y_ax_SPV.active = True
@@ -367,7 +379,8 @@ class Plotter_Window(Screen):
                             self.graph_title, self.peak_margins,
                             self.peak_prominence,
                             self.ids.flip_left.active,
-                            self.ids.flip_right.active)
+                            self.ids.flip_right.active,
+                            self.bPeakDownward)
                 self.graph_file = output_namepath
                 self.ids.preview_graph.source = self.graph_file
                 return None

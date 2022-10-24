@@ -324,12 +324,12 @@
                             Label:
                                 text: ""
                                 size_hint_x: None
-                                width: self.parent.width * 0.15
+                                width: self.parent.width * 0.1
                             BoxLayout:
                                 orientation: 'horizontal'  
                                 Label:
-                                    text: "SPV, with Prominence: "
-                                    size_hint_x: 0.35
+                                    text: "SPV | Prominence"
+                                    size_hint_x: 0.30
                                     background_color: (0,0,0,1)
                                 TextInput:
                                     id: prominence
@@ -337,14 +337,23 @@
                                     size_hint_x: 0.1
                                     multiline: False
                                     on_text: root.set_peak_prominence()
+                                Label:
+                                    text: "  CW "
+                                    size_hint_x: 0.1
+                                    background_color: (0,0,0,1)
+                                CheckBox:
+                                    id: down_peak
+                                    active: True
+                                    size_hint_x: 0.1
+                                    on_active: root.set_peak_direction(self.active)
                                 Button:
                                     text: "Test"
-                                    size_hint_x: 0.1
+                                    size_hint_x: 0.10
                                     background_color: (1, 1, 1, 1)
                                     multiline: False
                                     on_press: root.show_peaks()
                                 Label:
-                                    text: "Margins: "
+                                    text: " Margins: "
                                     size_hint_x: 0.2
                                     background_color: (0,0,0,1)
                                 TextInput:

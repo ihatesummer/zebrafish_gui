@@ -23,7 +23,8 @@ def peak_preview(output, x, x_label, x_range,
                  custom_colors,
                  graph_title,
                  peak_prominence,
-                 flip_left, flip_right):
+                 flip_left, flip_right,
+                 bPeakDownward):
     frame_duration = x[1] - x[0]
     fps = 1/frame_duration
     _, ax = plt.subplots()
@@ -43,7 +44,10 @@ def peak_preview(output, x, x_label, x_range,
                     color=custom_colors[i],
                     label=custom_eye_label[i],
                     linewidth=1)
-            peaks, _ = find_peaks(-y_arr, peak_prominence, distance=fps)
+            if bPeakDownward:
+                peaks, _ = find_peaks(-y_arr, peak_prominence, distance=fps)
+            else:
+                peaks, _ = find_peaks(y_arr, peak_prominence, distance=fps)
             ax.legend(loc="upper right")
             ax.plot(x[peaks], y_arr[peaks], "x", markersize=10, color=custom_colors[i])
             print(f"Peak occurrences: {x[peaks]} second")
@@ -61,7 +65,11 @@ def peak_preview(output, x, x_label, x_range,
         ax.plot(x, y,
                 color=my_color,
                 linewidth=1)
-        peaks, _ = find_peaks(-y, peak_prominence, distance=fps)
+        if bPeakDownward:
+            peaks, _ = find_peaks(-y, peak_prominence, distance=fps)
+        else:
+            peaks, _ = find_peaks(y, peak_prominence, distance=fps)
+
         ax.legend(loc="upper right")
         ax.plot(x[peaks], y[peaks], "x", markersize=10, color=my_color)
         print(f"Peak occurrences: {x[peaks]} second")
@@ -154,7 +162,8 @@ def show_spv(output, time, x_label, x_range,
              custom_colors,
              graph_title, margins,
              prominence,
-             flip_left, flip_right):
+             flip_left, flip_right,
+             bPeakDownward):
     fps = 1 / (time[1] - time[0])
     _, ax = plt.subplots()
 
@@ -170,8 +179,11 @@ def show_spv(output, time, x_label, x_range,
                 y_arr *= -1
                 new_avg = np.mean(y_arr)
                 y_arr += (avg-new_avg)
-            
-            low_peaks, _ = find_peaks(-y_arr, prominence, distance=fps)
+            if bPeakDownward:
+                low_peaks, _ = find_peaks(-y_arr, prominence, distance=fps)
+            else:
+                low_peaks, _ = find_peaks(y_arr, prominence, distance=fps)
+
             slowPhase_max_idx = get_slowPhase_maxima(y_arr, low_peaks, margins, fps)
             slowPhase_min_idx = get_slowPhase_minima(y_arr, low_peaks, margins, fps)
             mean_slowPhase_maxima = np.mean(y_arr[slowPhase_max_idx])
@@ -219,7 +231,10 @@ def show_spv(output, time, x_label, x_range,
             csv_name = output[:-4]+"_spv_right.csv"
 
         y_arr = y_list[0]
-        low_peaks, _ = find_peaks(-y_arr, prominence, distance=fps)
+        if bPeakDownward:
+            low_peaks, _ = find_peaks(-y_arr, prominence, distance=fps)
+        else:
+            low_peaks, _ = find_peaks(y_arr, prominence, distance=fps)
         slowPhase_max_idx = get_slowPhase_maxima(y_arr, low_peaks, margins, fps)
         slowPhase_min_idx = get_slowPhase_minima(y_arr, low_peaks, margins, fps)
         mean_slowPhase_maxima = np.mean(y_arr[slowPhase_max_idx])
