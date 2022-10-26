@@ -208,6 +208,10 @@ def show_spv(output, time, x_label, x_range,
              slowPhase_min_idx/fps, y_arr[slowPhase_min_idx])).T
             header = "max_time,max,min_time,min"
             np.savetxt(csv_name, log, delimiter=',', header=header)
+            with open(csv_name,'a') as fd:
+                fd.write(f"\nmean min, {mean_slowPhase_minima}")
+                fd.write(f"\nmean max, {mean_slowPhase_maxima}")
+                fd.write(f"\ncount per minute, {slowPhase_rate}")
 
             ax.plot(time, y_arr,
                     color=custom_colors[i],
@@ -253,6 +257,10 @@ def show_spv(output, time, x_label, x_range,
             slowPhase_min_idx/fps, y_arr[slowPhase_min_idx])).T
         header = "max_time,max,min_time,min"
         np.savetxt(csv_name, log, delimiter=',', header=header)
+        with open(csv_name,'a') as fd:
+                fd.write(f"\nmean min, {mean_slowPhase_minima}")
+                fd.write(f"\nmean max, {mean_slowPhase_maxima}")
+                fd.write(f"\ncount per minute, {slowPhase_rate}")
 
         ax.plot(time, y_arr,
                 color=my_color,
