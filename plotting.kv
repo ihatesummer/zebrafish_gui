@@ -563,7 +563,7 @@
                                     background_color: (0,0,0,1)
                                 CheckBox:
                                     on_active: root.update_eye_selection(self, self.active, "right")
-                                    active: True
+                                    active: False
                             Label:
                                 text: "w.r.t. body:"
                                 background_color: (0,0,0,1)
@@ -574,7 +574,7 @@
                                 size_hint_x: None
                                 width: self.parent.width * 0.2
                                 CheckBox:
-                                    active: True
+                                    active: False
                                     on_active: root.update_wrtB(self, self.active)
                         BoxLayout:
                             orientation: 'horizontal'

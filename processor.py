@@ -34,7 +34,7 @@ class Processor_Window(Screen):
         self.ins_offset_eyeR = [0, 0]
         self.ins_offset_bladder = [0, 0]
         self.crop_ratio = [[0, 1], [0, 1]]
-        self.bBladderSkip = False
+        self.bBladderSkip = True
         self.settings_names = ["fps",
                                "crop_width",
                                "crop_height",
@@ -289,30 +289,18 @@ class Processor_Window(Screen):
         # int, from 0 to nFrames-1
         out_frame_no = np.zeros(nFrames)
         # float, body eye angle [degree]
-        out_angle_B = np.zeros(nFrames)
-        # float, left eye angle [degree]
         out_angle_L = np.zeros(nFrames)
         # float, right eye angle [degree]
-        out_angle_R = np.zeros(nFrames)
-        # float, left eye area
         out_area_L = np.zeros(nFrames)
         # float, right eye area
-        out_area_R = np.zeros(nFrames)
-        # float, left eye minor axis length
         out_ax_min_L = np.zeros(nFrames)
         # float, left eye major axis length
         out_ax_maj_L = np.zeros(nFrames)
-        # float, right eye minor axis length
-        out_ax_min_R = np.zeros(nFrames)
-        # float, right eye major axis length
-        out_ax_maj_R = np.zeros(nFrames)
 
         return (out_bDetected, out_frame_no,
-                out_angle_B,
-                out_angle_L, out_angle_R,
-                out_area_L, out_area_R,
-                out_ax_min_L, out_ax_maj_L,
-                out_ax_min_R, out_ax_maj_R)
+                out_angle_L,
+                out_area_L,
+                out_ax_min_L, out_ax_maj_L)
 
     def get_frame_no(self, filename: str) -> int:
         """
@@ -345,15 +333,10 @@ class Processor_Window(Screen):
                       "Please extract the frames first.")
             (out_bDetected,
              out_frame_no,
-             out_angle_B,
              out_angle_L,
-             out_angle_R,
              area_L,
-             area_R,
              ax_min_L,
-             ax_maj_L,
-             ax_min_R,
-             ax_maj_R) = self.alloc_result_space(
+             ax_maj_L) = self.alloc_result_space(
                 self.nFrames)
             for i, file in enumerate(file_list):
                 out_frame_no[i] = self.get_frame_no(file)
@@ -363,15 +346,10 @@ class Processor_Window(Screen):
                                   "processed_"+file)
                 try:
                     (out_bDetected[i],
-                    out_angle_B[i],
                     out_angle_L[i],
-                    out_angle_R[i],
                     area_L[i],
-                    area_R[i],
                     ax_min_L[i],
-                    ax_maj_L[i],
-                    ax_min_R[i],
-                    ax_maj_R[i]) = d.main(
+                    ax_maj_L[i]) = d.main(
                         self.crop_ratio,
                         self.bBladderSkip,
                         self.brt_bounds_eye,
@@ -387,17 +365,10 @@ class Processor_Window(Screen):
                         debug)
                 except:
                     (out_bDetected[i],
-                     out_angle_B[i],
                      out_angle_L[i],
-                     out_angle_R[i],
                      area_L[i],
-                     area_R[i],
                      ax_min_L[i],
-                     ax_maj_L[i],
-                     ax_min_R[i],
-                     ax_maj_R[i]) = (False, 0,
-                                         0, 0, 0, 0,
-                                         0, 0, 0, 0)
+                     ax_maj_L[i]) = (False, 0, 0, 0, 0)
                 
                 if out_bDetected[i]:
                     print(f"Frame #{int(out_frame_no[i])} of",
@@ -408,15 +379,10 @@ class Processor_Window(Screen):
             self.save_result(
                 out_bDetected,
                 out_frame_no,
-                out_angle_B,
                 out_angle_L,
-                out_angle_R,
                 area_L,
-                area_R,
                 ax_min_L,
-                ax_maj_L,
-                ax_min_R,
-                ax_maj_R)
+                ax_maj_L)
             nDetected = np.count_nonzero(out_bDetected)
             print(f"{self.nFrames - nDetected} out of",
                   f"{self.nFrames} frames failed.")
@@ -441,46 +407,29 @@ class Processor_Window(Screen):
                 self.ids.preview_proc.source = savename
                 self.ids.preview_proc.reload()
             except Exception as e:
-                print(f"ERROR: try adjusting the settings: {e}")
+                print(f"ERROR: {e}")
 
     def normalize_area(self, area):
         mean_area = np.mean(area)
         return (area - mean_area) / mean_area
 
     def save_result(
-        self, out_bDetected, out_frame_no,
-        out_angle_B, out_angle_L, out_angle_R,
-        area_L, area_R,
-        ax_min_L, ax_maj_L,
-        ax_min_R, ax_maj_R):
+        self, out_bDetected, out_frame_no, out_angle_L,
+        area_L, ax_min_L, ax_maj_L):
 
         out_time = out_frame_no/self.fps
-        out_angle_wrtB_L = out_angle_L - out_angle_B
-        out_angle_wrtB_R = out_angle_R - out_angle_B
-        out_angle_wrtB_L = self.fix_twisted_eyes(out_angle_wrtB_L)
-        out_angle_wrtB_R = self.fix_twisted_eyes(out_angle_wrtB_R)
-        # invert eye angle w.r.t. body
-        # so that pos. value is to the right
-        # and neg. value is to the left
-        out_angle_wrtB_L *= -1
-        out_angle_wrtB_R *= -1
         out_area_norm_L = self.normalize_area(area_L)
-        out_area_norm_R = self.normalize_area(area_R)
         out_axes_ratio_L = ax_maj_L/ax_min_L
-        out_axes_ratio_R = ax_maj_R/ax_min_R
 
         detection_log = np.vstack(
-            (out_frame_no, out_time,
-             out_bDetected, out_angle_B,
-             out_angle_L, out_angle_wrtB_L,
-             out_angle_R, out_angle_wrtB_R,
-             out_area_norm_L, out_area_norm_R,
-             out_axes_ratio_L, out_axes_ratio_R)).T
-        header = "frame_no,time,bDetected,angle_B," + \
-            "angle_L,angle_wrtB_L," + \
-            "angle_R,angle_wrtB_R," + \
-            "area_norm_L,area_norm_R," + \
-            "ax_ratio_L,ax_ratio_R"
+            (out_frame_no,
+             out_time,
+             out_bDetected,
+             out_angle_L,
+             out_area_norm_L,
+             out_axes_ratio_L)).T
+        header = "frame_no,time,bDetected," + \
+            "angle_L,area_norm_L,ax_ratio_L"
         np.savetxt(join(self.save_path, "result.csv"),
                 detection_log, delimiter=',',
                 header=header)
