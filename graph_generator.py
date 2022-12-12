@@ -129,7 +129,7 @@ def get_slowPhase_maxima(angVel, peaks, margins, fps):
         max_indices.append(np.argmax(target_window) + start_frame)
         start_frame = peaks[i] + 1 + right_margin
     # one remaining window after the last peak
-    target_window = angVel[start_frame+right_margin:]
+    target_window = angVel[start_frame:]
     max_indices.append(np.argmax(target_window) + start_frame)
     return max_indices
 
@@ -148,7 +148,7 @@ def get_slowPhase_minima(angVel, peaks, margins, fps):
         min_indices.append(np.argmin(target_window) + start_frame)
         start_frame = peaks[i] + 1 + right_margin
     # one remaining window after the last peak
-    target_window = angVel[start_frame+right_margin:]
+    target_window = angVel[start_frame:]
     min_indices.append(np.argmin(target_window) + start_frame)
     return min_indices
 

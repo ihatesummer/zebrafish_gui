@@ -20,7 +20,7 @@ class Plotter_Window(Screen):
             getcwd(), "results", self.vid_name)
         self.data_file = ""
         self.graph_file = ""
-        self.eye_selection = ["left", "right"]
+        self.eye_selection = ["left"]
         self.axes_selection = {
             "x": "time",
             "y": "angle"}
@@ -29,7 +29,7 @@ class Plotter_Window(Screen):
         self.custom_grid = [None, None]
         self.custom_colors = ["blue", "green"]
         self.graph_title = ""
-        self.wrt_B = True
+        self.wrt_B = False
         self.bNoData = False
         self.x_range = [0, 0]
         self.y_range = [0, 0]
@@ -363,108 +363,108 @@ class Plotter_Window(Screen):
             return None
         output_namepath = self.get_timestamp_namepath()
 
-        try:
-            x, xlabel = self.fetch_x()
-            y, y_label, idx = self.fetch_y()
+        # try:
+        x, xlabel = self.fetch_x()
+        y, y_label, idx = self.fetch_y()
 
-            if self.axes_selection["y"] == "spv":
-                gg.show_spv(output_namepath,
-                            self.c_time, xlabel, self.x_range,
-                            y, y_label, self.y_range,
-                            self.eye_selection,
-                            self.custom_grid,
-                            self.custom_label,
-                            self.custom_eye_label,
-                            self.custom_colors,
-                            self.graph_title, self.peak_margins,
-                            self.peak_prominence,
-                            self.ids.flip_left.active,
-                            self.ids.flip_right.active,
-                            self.bPeakDownward)
-                self.graph_file = output_namepath
-                self.ids.preview_graph.source = self.graph_file
-                return None
-
-            if self.axes_selection["y"] == "beats":
-                bpms = []
-                for y_arr in y:
-                    bpm = self.get_bpm(y_arr)
-                    bpms.append(bpm)
-                gg.show_bpm(output_namepath, bpms, self.eye_selection)
-                self.graph_file = output_namepath
-                self.ids.preview_graph.source = self.graph_file
-                return None
-            
-            if self.axes_selection["y"] == "sacc_freq":
-                gg.show_sacc_freq(output_namepath,
-                            self.c_time, xlabel, self.x_range,
-                            y, y_label, self.y_range,
-                            self.eye_selection,
-                            self.custom_grid,
-                            self.custom_label,
-                            self.custom_eye_label,
-                            self.custom_colors,
-                            self.graph_title, idx)
-                self.graph_file = output_namepath
-                self.ids.preview_graph.source = self.graph_file
-                return None         
-
-            if self.axes_selection["x"] == "freq":
-                idx_start = int(
-                    self.fft_timeRange[0]*self.fps)
-                idx_end = int(
-                    self.fft_timeRange[1]*self.fps)
-                order = 6
-                cutoff = 1
-
-                for i, y_arr in enumerate(y):
-                    y_arr = y_arr[idx_start:idx_end]
-                    # y[i] = abs(rfft(y_arr)) / len(y_arr)
-                    if self.ids.lpf.active:
-                        b, a = butter(order, cutoff, fs=self.fps, btype='low', analog=False)
-                        y_arr = lfilter(b, a, y_arr)
-                    f, y[i] = welch(y_arr, self.fps)
-                    if self.ids.normalize.active:
-                        normalizer = integrate.cumtrapz(y[i], f)[-1]
-                        y[i] = y[i] / normalizer
-                nSamples = len(
-                    self.c_time[idx_start:idx_end])
-                sample_interval = 1 / self.fps
-                # x = rfftfreq(nSamples, sample_interval)
-                x, _ = welch(y_arr, self.fps)
-                # idx_y_unit = y_label.index("[") - 1
-                y_label = y_label + " - Amplitude"
-                # y_label = y_label[:idx_y_unit] + " - Amplitude"
-
-            gg.main(output_namepath,
-                    x, xlabel, self.x_range,
-                    y, y_label, self.y_range,
-                    self.eye_selection,
-                    self.custom_grid,
-                    self.custom_label,
-                    self.custom_eye_label,
-                    self.custom_colors,
-                    self.graph_title,
-                    self.axes_selection["x"],
-                    self.ids.flip_left.active,
-                    self.ids.flip_right.active)
-            if len(y) == 2: #both left and right eyes selected
-                gg.main_separate(output_namepath,
-                                 x, xlabel, self.x_range,
-                                 y, y_label, self.y_range,
-                                 self.eye_selection,
-                                 self.custom_grid,
-                                 self.custom_label,
-                                 self.custom_eye_label,
-                                 self.custom_colors,
-                                 self.graph_title,
-                                 self.axes_selection["x"],
-                                 self.ids.flip_left.active,
-                                 self.ids.flip_right.active)
+        if self.axes_selection["y"] == "spv":
+            gg.show_spv(output_namepath,
+                        self.c_time, xlabel, self.x_range,
+                        y, y_label, self.y_range,
+                        self.eye_selection,
+                        self.custom_grid,
+                        self.custom_label,
+                        self.custom_eye_label,
+                        self.custom_colors,
+                        self.graph_title, self.peak_margins,
+                        self.peak_prominence,
+                        self.ids.flip_left.active,
+                        self.ids.flip_right.active,
+                        self.bPeakDownward)
             self.graph_file = output_namepath
             self.ids.preview_graph.source = self.graph_file
-        except Exception as e:
-            print(f"ERROR: invalid configuration(s): {e}")
+            return None
+
+        if self.axes_selection["y"] == "beats":
+            bpms = []
+            for y_arr in y:
+                bpm = self.get_bpm(y_arr)
+                bpms.append(bpm)
+            gg.show_bpm(output_namepath, bpms, self.eye_selection)
+            self.graph_file = output_namepath
+            self.ids.preview_graph.source = self.graph_file
+            return None
+        
+        if self.axes_selection["y"] == "sacc_freq":
+            gg.show_sacc_freq(output_namepath,
+                        self.c_time, xlabel, self.x_range,
+                        y, y_label, self.y_range,
+                        self.eye_selection,
+                        self.custom_grid,
+                        self.custom_label,
+                        self.custom_eye_label,
+                        self.custom_colors,
+                        self.graph_title, idx)
+            self.graph_file = output_namepath
+            self.ids.preview_graph.source = self.graph_file
+            return None         
+
+        if self.axes_selection["x"] == "freq":
+            idx_start = int(
+                self.fft_timeRange[0]*self.fps)
+            idx_end = int(
+                self.fft_timeRange[1]*self.fps)
+            order = 6
+            cutoff = 1
+
+            for i, y_arr in enumerate(y):
+                y_arr = y_arr[idx_start:idx_end]
+                # y[i] = abs(rfft(y_arr)) / len(y_arr)
+                if self.ids.lpf.active:
+                    b, a = butter(order, cutoff, fs=self.fps, btype='low', analog=False)
+                    y_arr = lfilter(b, a, y_arr)
+                f, y[i] = welch(y_arr, self.fps)
+                if self.ids.normalize.active:
+                    normalizer = integrate.cumtrapz(y[i], f)[-1]
+                    y[i] = y[i] / normalizer
+            nSamples = len(
+                self.c_time[idx_start:idx_end])
+            sample_interval = 1 / self.fps
+            # x = rfftfreq(nSamples, sample_interval)
+            x, _ = welch(y_arr, self.fps)
+            # idx_y_unit = y_label.index("[") - 1
+            y_label = y_label + " - Amplitude"
+            # y_label = y_label[:idx_y_unit] + " - Amplitude"
+
+        gg.main(output_namepath,
+                x, xlabel, self.x_range,
+                y, y_label, self.y_range,
+                self.eye_selection,
+                self.custom_grid,
+                self.custom_label,
+                self.custom_eye_label,
+                self.custom_colors,
+                self.graph_title,
+                self.axes_selection["x"],
+                self.ids.flip_left.active,
+                self.ids.flip_right.active)
+        if len(y) == 2: #both left and right eyes selected
+            gg.main_separate(output_namepath,
+                                x, xlabel, self.x_range,
+                                y, y_label, self.y_range,
+                                self.eye_selection,
+                                self.custom_grid,
+                                self.custom_label,
+                                self.custom_eye_label,
+                                self.custom_colors,
+                                self.graph_title,
+                                self.axes_selection["x"],
+                                self.ids.flip_left.active,
+                                self.ids.flip_right.active)
+        self.graph_file = output_namepath
+        self.ids.preview_graph.source = self.graph_file
+        # except Exception as e:
+        #     print(f"ERROR: {e}")
 
     def update_wrtB(self, instance, value):
         self.wrt_B = value
@@ -672,15 +672,9 @@ class Plotter_Window(Screen):
             self.c_frame_no = data_frame[:, 0]
             self.c_time = data_frame[:, 1]
             self.c_bDetected = data_frame[:, 2]
-            self.c_angle_B = self.interpolate(data_frame[:, 3])
-            self.c_angle_L = self.interpolate(data_frame[:, 4])
-            self.c_angle_wrtB_L = self.interpolate(data_frame[:, 5])
-            self.c_angle_R = self.interpolate(data_frame[:, 6])
-            self.c_angle_wrtB_R = self.interpolate(data_frame[:, 7])
-            self.c_area_norm_L = self.interpolate(data_frame[:, 8])
-            self.c_area_norm_R = self.interpolate(data_frame[:, 9])
-            self.c_ax_ratio_L = self.interpolate(data_frame[:, 10])
-            self.c_ax_ratio_R = self.interpolate(data_frame[:, 11])
+            self.c_angle_L = self.interpolate(data_frame[:, 3])
+            self.c_area_norm_L = self.interpolate(data_frame[:, 4])
+            self.c_ax_ratio_L = self.interpolate(data_frame[:, 5])
             self.fps = 1 / (self.c_time[1] - self.c_time[0])
             self.bNoData = False
             print(f"{self.vid_name} [{int(self.fps)}FPS] data loaded.")
