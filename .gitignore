@@ -4,6 +4,7 @@ videos/vor.avi
 videos/2021-12-20_CON 1-1.avi
 zebrafish/
 .vscode/
+tmp*.py
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,venv,video,images
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,venv,video,images
